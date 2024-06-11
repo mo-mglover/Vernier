@@ -73,14 +73,18 @@ private:
 
   // Data members
   int max_threads_;
+  bool add_call_depth_;
 
   // MPI Context
   MPIContext mpi_context_;
 
   // Static, threadprivate data members
+  static int call_depth_thread_;
   static time_point_t logged_calliper_start_time_;
-  static int call_depth_;
-#pragma omp threadprivate(call_depth_, logged_calliper_start_time_)
+#pragma omp threadprivate(call_depth_thread_, logged_calliper_start_time_)
+
+  // Static data members
+  static int call_depth_master_;
 
   // Hashtables and tracebacks
   std::vector<HashTable> thread_hashtables_;
@@ -95,6 +99,11 @@ private:
   // Private methods
   void start_part1();
   size_t start_part2(std::string_view const);
+
+  void basic_insert(std::string_view const, int const,
+                    size_t&, record_index_t&);
+  void depth_insert(std::string_view const, int const,
+                    call_depth_t const, size_t&, record_index_t&);
 
 public:
   // Default constructor needed for `inline` global Vernier object.

@@ -64,3 +64,10 @@ endfunction()
 
 add_mpi_not_init_unit_test(test_mpi_not_init test_mpi_not_init.cpp)
 
+# ------------------------------------------------------------------------------ 
+# Point to properties file.
+# ------------------------------------------------------------------------------ 
+
+set_property(DIRECTORY APPEND PROPERTY TEST_INCLUDE_FILES
+${CMAKE_CURRENT_LIST_DIR}/properties.cmake)
+

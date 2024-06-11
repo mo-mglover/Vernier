@@ -19,6 +19,10 @@
 
 #include "vernier_gettime.h"
 
+// Define the call depth type.
+using call_depth_t = int;
+call_depth_t constexpr null_call_depth = -1;
+
 namespace meto {
 
 /**
@@ -32,12 +36,14 @@ struct RegionRecord {
 public:
   // Constructor
   RegionRecord() = delete;
-  explicit RegionRecord(size_t const, std::string_view const, int);
+  explicit RegionRecord(size_t const, std::string_view const, int const,
+                        call_depth_t const, std::string_view parent_region_name);
 
   // Data members
   size_t region_hash_;
   std::string region_name_;
   std::string decorated_region_name_;
+  call_depth_t    call_depth_;
   time_duration_t total_walltime_;
   time_duration_t recursion_total_walltime_;
   time_duration_t self_walltime_;

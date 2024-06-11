@@ -21,23 +21,34 @@ int const tid = 0;
 std::string tid_str(std::to_string(tid));
 std::string tid_bytes(reinterpret_cast<char const *>(&tid), sizeof(tid));
 
-TEST(RegionNameTest, NamesMatchTest) {
+int const call_depth_prof = 0;
+int const call_depth_main = 0;
+int const call_depth_sub  = 1;
+
+// Conversions to strings
+std::string call_depth_prof_str(std::to_string(call_depth_prof));
+std::string call_depth_main_str(std::to_string(call_depth_main));
+std::string call_depth_sub_str(std::to_string (call_depth_sub));
+
+// Reinterpret casts
+std::string call_depth_bytes(reinterpret_cast<char const*>(&call_depth_prof), sizeof(call_depth_prof));
+
+TEST(RegionNameTest,NamesMatchTestBasic) {
 
   meto::vernier.init();
 
-  // Start main region with name "Cappucino"
-  const auto &prof_cappucino = meto::vernier.start("Cappucino");
+  //Start main region with name "Cappucino"
+  const auto& prof_cappucino = meto::vernier.start("Cappucino");
 
   {
     SCOPED_TRACE("Problem with sub-region name");
 
     // Start timing a sub-region with name "Latte"
     std::string myString = "Latte";
-    const auto &prof_latte = meto::vernier.start(myString);
+    const auto& prof_latte = meto::vernier.start(myString);
 
     // Get subregion name out from profiler and check it is what we expect
-    std::string subregionName =
-        meto::vernier.get_decorated_region_name(prof_latte, tid);
+    std::string subregionName = meto::vernier.get_decorated_region_name(prof_latte, tid);
     EXPECT_EQ("Latte@" + tid_str, subregionName);
 
     meto::vernier.stop(prof_latte);
@@ -47,8 +58,7 @@ TEST(RegionNameTest, NamesMatchTest) {
     SCOPED_TRACE("Problem with main region name");
 
     // Get main region name out from profiler and test
-    std::string regionName =
-        meto::vernier.get_decorated_region_name(prof_cappucino, tid);
+    std::string regionName = meto::vernier.get_decorated_region_name(prof_cappucino, tid);
     EXPECT_EQ("Cappucino@" + tid_str, regionName);
   }
 
@@ -56,17 +66,62 @@ TEST(RegionNameTest, NamesMatchTest) {
     SCOPED_TRACE("Problem with the profiler region name");
 
     // Get profiler region name out from the profiler and test
-    auto const prof_self_handle =
-        std::hash<std::string_view>{}("__vernier__" + tid_bytes);
-    std::string profilerRegionName =
-        meto::vernier.get_decorated_region_name(prof_self_handle, tid);
+    //auto const prof_self_handle = std::hash<std::string_view>{}("__vernier__" + tid_bytes + call_depth_bytes);
+    auto const prof_self_handle = std::hash<std::string_view>{}("__vernier__" + tid_bytes);
+    std::string profilerRegionName = meto::vernier.get_decorated_region_name(prof_self_handle, tid);
     EXPECT_EQ("__vernier__@" + tid_str, profilerRegionName);
   }
 
   meto::vernier.stop(prof_cappucino);
 
   meto::vernier.finalize();
+
 }
+
+TEST(RegionNameTest,NamesMatchTestDepth) {
+
+  meto::vernier.init();
+
+  //Start main region with name "Cappucino"
+  const auto& prof_cappucino = meto::vernier.start("Cappucino");
+
+  {
+    SCOPED_TRACE("Problem with sub-region name");
+
+    // Start timing a sub-region with name "Latte"
+    std::string myString = "Latte";
+    const auto& prof_latte = meto::vernier.start(myString);
+
+    // Get subregion name out from profiler and check it is what we expect
+    std::string subregionName = meto::vernier.get_decorated_region_name(prof_latte, tid);
+    EXPECT_EQ("Cappucino-->Latte~" + call_depth_sub_str + "@" + tid_str, subregionName);
+
+    meto::vernier.stop(prof_latte);
+  }
+
+  {
+    SCOPED_TRACE("Problem with main region name");
+
+    // Get main region name out from profiler and test
+    std::string regionName = meto::vernier.get_decorated_region_name(prof_cappucino, tid);
+    EXPECT_EQ("Cappucino~" + call_depth_main_str + "@" + tid_str, regionName);
+  }
+
+  {
+    SCOPED_TRACE("Problem with the profiler region name");
+
+    // Get profiler region name out from the profiler and test
+    auto const prof_self_handle = std::hash<std::string_view>{}("__vernier__" + tid_bytes);
+    std::string profilerRegionName = meto::vernier.get_decorated_region_name(prof_self_handle, tid);
+    EXPECT_EQ("__vernier__@" + tid_str, profilerRegionName);
+  }
+
+  meto::vernier.stop(prof_cappucino);
+
+  meto::vernier.finalize();
+
+}
+
 
 /**
  *  @TODO  Think about whether or not we want region name checks within code,

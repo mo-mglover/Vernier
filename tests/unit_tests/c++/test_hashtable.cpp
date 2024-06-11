@@ -20,6 +20,14 @@ int const tid = 0;
 std::string tid_str(std::to_string(tid));
 std::string tid_bytes(reinterpret_cast<char const *>(&tid), sizeof(tid));
 
+int const call_depth_main = 0;
+int const call_depth_sub  = 1;
+
+// Reinterpret casts
+std::string call_depth_main_bytes(reinterpret_cast<char const*>(&call_depth_main), sizeof(call_depth_main));
+std::string call_depth_sub_bytes (reinterpret_cast<char const*>(&call_depth_sub ), sizeof(call_depth_sub ));
+
+
 //
 //  Testing that the hashing function works as expected (we don't want
 //  collisions), and that walltimes are being updated by vernier.stop().
@@ -28,7 +36,7 @@ std::string tid_bytes(reinterpret_cast<char const *>(&tid), sizeof(tid));
 //  sure it returns the MDI of 0.0
 //
 
-TEST(HashTableTest, HashFunctionTest) {
+TEST(HashTableTest, HashFunctionTestBasic) {
 
   meto::vernier.init();
 
@@ -56,13 +64,37 @@ TEST(HashTableTest, HashFunctionTest) {
   meto::vernier.finalize();
 }
 
+TEST(HashTableTest,HashFunctionTestDepth) {
+
+  meto::vernier.init();
+
+  // Create new hashes via HashTable::query_insert, which is used in Profiler::start
+  const auto& prof_rigatoni = meto::vernier.start("Rigatoni");
+  const auto& prof_penne    = meto::vernier.start("Penne");
+  meto::vernier.stop(prof_penne);
+  meto::vernier.stop(prof_rigatoni);
+
+  {
+    SCOPED_TRACE("Hashing related fault");
+
+    // Checking that:
+    //  - query_insert'ing Penne or Rigatoni just returns the hash
+    //  - the regions have different hashes
+    //  - the regions have the hashes returned by hash_function_ which uses std::hash
+    EXPECT_EQ(meto::vernier.start("Rigatoni"), std::hash<std::string_view>{}("Rigatoni" + tid_bytes + call_depth_main_bytes));
+    EXPECT_EQ(meto::vernier.start("Penne"),    std::hash<std::string_view>{}("Penne"    + tid_bytes + call_depth_sub_bytes ));
+  }
+
+  meto::vernier.finalize();
+}
+
 /**
  * @TODO  Decide how to handle the MDI stuff and update the following test
  *        accordingly. See Issue #53.
  *
  */
 
-TEST(HashTableTest, UpdateTimesTest) {
+TEST(HashTableTest, UpdateTimesTestBasic) {
 
   meto::vernier.init();
 
@@ -113,3 +145,54 @@ TEST(HashTableTest, UpdateTimesTest) {
 
   meto::vernier.finalize();
 }
+
+TEST(HashTableTest,UpdateTimesTestDepth) {
+
+  meto::vernier.init();
+
+  // Create new hash
+  size_t prof_pie = std::hash<std::string>{}("Pie" + tid_bytes + call_depth_main_bytes);
+
+  // Trying to find a time before .start() will throw an exception
+  EXPECT_THROW(meto::vernier.get_total_walltime(prof_pie, 0), std::out_of_range);
+
+  // Start timing
+  auto const& expected_hash = meto::vernier.start("Pie");
+  EXPECT_EQ(expected_hash,prof_pie); // Make sure prof_pie has the hash we expect
+
+  sleep(1);
+
+  // Time t1 declared inbetween .start() and first .stop()
+  double const t1 = meto::vernier.get_total_walltime(prof_pie, 0);
+
+  //Stop timing
+  meto::vernier.stop(prof_pie);
+
+  // Time t2 declared after first profiler.stop()
+  double const t2 = meto::vernier.get_total_walltime(prof_pie, 0);
+
+  // Start and stop same region again
+  meto::vernier.start("Pie");
+  sleep(1);
+  meto::vernier.stop(prof_pie);
+
+  // Time t3 declared after second profiler.stop()
+  double const t3 = meto::vernier.get_total_walltime(prof_pie, 0);
+
+  // Expected behaviour: t1 return the MDI and t3 > t2 > 0
+  constexpr double MDI = 0.0;     // Missing Data Indicator (MDI)
+
+  {
+    SCOPED_TRACE("MDI missing from time points expected to return it");
+    EXPECT_EQ(t1, MDI);
+  }
+
+  {
+    SCOPED_TRACE("Update potentially not incrementing times correctly");
+    EXPECT_GT(t2, 0.0);
+    EXPECT_GT(t3, t2 );
+  }
+
+  meto::vernier.finalize();
+}
+

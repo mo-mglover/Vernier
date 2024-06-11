@@ -31,7 +31,8 @@ meto::HashTable::HashTable(int const tid) : tid_(tid) {
   std::string const profiler_name = "__vernier__";
 
   // Insert special entry for the profiler overhead time.
-  query_insert(profiler_name, tid, profiler_hash_, profiler_index_);
+  query_insert(profiler_name, "", tid, null_call_depth, 
+               profiler_hash_, profiler_index_);
 }
 
 /**
@@ -52,7 +53,8 @@ meto::HashTable::HashTable(int const tid) : tid_(tid) {
  *
  */
 
-size_t meto::HashTable::compute_hash(std::string_view region_name, int tid) {
+size_t meto::HashTable::compute_hash(std::string_view region_name, 
+                          int tid, call_depth_t const call_depth) {
 
   // Get the bit-pattern of the thread ID.
   std::array<std::byte, sizeof(tid)> tid_bytes;
@@ -62,13 +64,24 @@ size_t meto::HashTable::compute_hash(std::string_view region_name, int tid) {
       reinterpret_cast<int const *>(tid_bytes.data());
   assert(*tid_back == tid);
 
-  // Extra bytes to accommodate the thread ID.
-  unsigned int constexpr num_extra_bytes = sizeof(tid);
+   // Get the bit-pattern of the call depth.
+   std::array<std::byte, sizeof(call_depth)> call_depth_bytes;
+   std::memcpy(call_depth_bytes.data(), &call_depth, sizeof(call_depth));
+ 
+   [[maybe_unused]] call_depth_t const *call_depth_back
+     = reinterpret_cast<call_depth_t const *>(call_depth_bytes.data());
+   assert (*call_depth_back == call_depth);
 
   // Avoid dynamic memory allocation for performance reasons. Instead, fix the
   // size of the buffer and perform a runtime check that we're not exceeding it.
   std::array<char, PROF_STRING_BUFFER_LENGTH> new_chars;
   new_chars.fill('\0');
+
+  // Extra bytes to accommodate the thread ID and call depth.
+  unsigned int num_extra_bytes = sizeof(tid);
+  if (call_depth != null_call_depth){
+    num_extra_bytes += sizeof(call_depth);
+  }
 
   if (region_name.length() + num_extra_bytes > new_chars.size()) {
     error_handler("Internal error: character buffer exhausted.", EXIT_FAILURE);
@@ -84,6 +97,12 @@ size_t meto::HashTable::compute_hash(std::string_view region_name, int tid) {
   // Add thread ID (physical representation)
   std::memcpy(&(*new_chars_iterator), tid_bytes.data(), tid_bytes.size());
   std::advance(new_chars_iterator, tid_bytes.size());
+
+   // Add call depth (physical representation)
+   if (call_depth != null_call_depth){
+     std::memcpy(&(*new_chars_iterator), call_depth_bytes.data(), call_depth_bytes.size());
+     std::advance(new_chars_iterator, call_depth_bytes.size());
+   }
 
   // Compute the length of the character array based on the current position of
   // the iterator.
@@ -108,11 +127,14 @@ size_t meto::HashTable::compute_hash(std::string_view region_name, int tid) {
  *
  */
 
-void meto::HashTable::query_insert(std::string_view const region_name, int tid,
+void meto::HashTable::query_insert(std::string_view const region_name,
+                                   std::string_view const parent_region_name,
+                                   int const tid,
+                                   call_depth_t const call_depth,
                                    size_t &hash,
                                    record_index_t &record_index) noexcept {
   // Compute the hash
-  hash = compute_hash(region_name, tid);
+  hash = compute_hash(region_name, tid, call_depth);
 
   // Does the entry exist already?
   if (auto search = lookup_table_.find(hash); search != lookup_table_.end()) {
@@ -122,7 +144,7 @@ void meto::HashTable::query_insert(std::string_view const region_name, int tid,
   // If not, create new entry.
   else {
     // Insert this region into the thread's hash table.
-    hashvec_.emplace_back(hash, region_name, tid);
+    hashvec_.emplace_back(hash, region_name, tid, call_depth, parent_region_name);
     record_index = hashvec_.size() - 1;
     lookup_table_.emplace(hash, record_index);
     assert(lookup_table_.count(hash) > 0);
@@ -383,12 +405,22 @@ double meto::HashTable::get_child_walltime(size_t const hash) const {
 }
 
 /**
+ * @brief  Get the region name corresponding to the input index.
+ * @param [in] hash  The hash corresponding to the index.
+ */
+
+std::string_view meto::HashTable::get_region_name_by_index(record_index_t const record_index) const
+{
+  return hashvec_[record_index].region_name_;
+}
+
+/**
  * @brief  Get the region name corresponding to the input hash.
  * @param [in] hash  The hash corresponding to the region.
  */
 
-std::string
-meto::HashTable::get_decorated_region_name(size_t const hash) const {
+
+std::string meto::HashTable::get_decorated_region_name(size_t const hash) const {
   auto &record = hash2record(hash);
   return record.decorated_region_name_;
 }

@@ -11,13 +11,20 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <cstring>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
 // Initialize static data members.
-int meto::Vernier::call_depth_ = -1;
+int meto::Vernier::call_depth_thread_ = -1;
+int meto::Vernier::call_depth_master_ =  0;
 meto::time_point_t meto::Vernier::logged_calliper_start_time_{};
+
+// Call depth on the master thread. This variable is updated in serial regions
+// (only), providing a record of the call depth on the master thread at an
+// OpenMP fork.
+call_depth_t call_depth_master = 0;
 
 /**
  * @brief Constructor for TracebackEntry struct.
@@ -52,6 +59,13 @@ void meto::Vernier::init(MPI_Comm const client_comm_handle) {
 #ifdef _OPENMP
   max_threads_ = omp_get_max_threads();
 #endif
+
+  // Determine whether to add the call depth to the profile.
+  char const* env_call_depth = std::getenv("VERNIER_ADD_CALL_DEPTH");
+  add_call_depth_ = false;
+  if (env_call_depth && std::strcmp(env_call_depth, "true") == 0) {
+    add_call_depth_ = true;
+  }
 
   // Create vector of hash tables: one hashtable for each thread.
   for (int tid = 0; tid < max_threads_; ++tid) {
@@ -150,16 +164,35 @@ size_t meto::Vernier::start_part2(std::string_view const region_name) {
   assert(tid <= thread_hashtables_.size());
   assert(tid <= thread_traceback_.size());
 
+  // Increment the call depth
+  ++call_depth_thread_;
+
+  // If we are not in a parallel region, store the call depth on the master
+  // thread. NB: `pragma omp master` would not work as needed, since we don't
+  // want this code to execute at all in parallel regions; not even on the
+  // master thread.
+  if (!omp_in_parallel()){
+    call_depth_master_ = call_depth_thread_;
+  }
+
   size_t hash;
   record_index_t record_index;
-  thread_hashtables_[tid].query_insert(region_name, tid_int, hash,
-                                       record_index);
+  
+  if (add_call_depth_) {
+    // Construct the call depth to be output and hashed.
+    auto call_depth_to_hash = call_depth_thread_;
+    if (tid > 0) {call_depth_to_hash += call_depth_master_ + 1;}
+      depth_insert(region_name, tid_int, call_depth_to_hash, hash, record_index);
+  }
+  else {
+    basic_insert(region_name, tid_int, hash, record_index);
+  }
+
   thread_hashtables_[tid].increment_recursion_level(record_index);
 
   // Store the calliper and region start times.
-  ++call_depth_;
-  if (call_depth_ < PROF_MAX_TRACEBACK_SIZE) {
-    auto call_depth_index = static_cast<traceback_index_t>(call_depth_);
+  if (call_depth_thread_ < PROF_MAX_TRACEBACK_SIZE) {
+    auto call_depth_index = static_cast<traceback_index_t>(call_depth_thread_);
     auto region_start_time = vernier_gettime();
     thread_traceback_[tid].at(call_depth_index) = TracebackEntry(
         hash, record_index, region_start_time, logged_calliper_start_time_);
@@ -192,13 +225,13 @@ void meto::Vernier::stop(size_t const hash) {
 
   // Check that we have called a start calliper before the stop calliper.
   // If not, then the call depth would be -1.
-  if (call_depth_ < 0) {
+  if (call_depth_thread_ < 0) {
     error_handler("EMERGENCY STOP: stop called before start calliper.",
                   EXIT_FAILURE);
   }
 
   // Get reference to the traceback entry.
-  auto call_depth_index = static_cast<traceback_index_t>(call_depth_);
+  auto call_depth_index = static_cast<traceback_index_t>(call_depth_thread_);
   auto &traceback_entry = thread_traceback_[tid].at(call_depth_index);
 
   // Check: which hash is last on the traceback list?
@@ -234,8 +267,8 @@ void meto::Vernier::stop(size_t const hash) {
   time_duration_t *profiler_overhead_time_ptr = nullptr;
 
   // Acquire parent pointers
-  if (call_depth_ > 0) {
-    auto parent_depth = static_cast<traceback_index_t>(call_depth_ - 1);
+  if (call_depth_thread_ > 0) {
+    auto parent_depth = static_cast<traceback_index_t>(call_depth_thread_ - 1);
     record_index_t parent_index =
         thread_traceback_[tid].at(parent_depth).record_index_;
     thread_hashtables_[tid].add_child_time_to_parent(
@@ -246,7 +279,15 @@ void meto::Vernier::stop(size_t const hash) {
   thread_hashtables_[tid].add_profiler_call(profiler_overhead_time_ptr);
 
   // Decrement index to last entry in the traceback.
-  --call_depth_;
+  --call_depth_thread_;
+
+  // If we are not in a parallel region, store the call depth on the master
+  // thread. NB: `pragma omp master` would not work as needed, since we don't
+  // want this code to execute at all in parallel; not even on the master
+  // thread.
+  if (!omp_in_parallel()) {
+    call_depth_master_ = call_depth_thread_;
+  }
 
   // Account for time spent in the profiler itself.
   auto calliper_stop_time = vernier_gettime();
@@ -260,6 +301,61 @@ void meto::Vernier::stop(size_t const hash) {
     *parent_overhead_time_ptr += calliper_time;
   }
   *profiler_overhead_time_ptr += calliper_time;
+}
+
+void meto::Vernier::basic_insert(std::string_view const region_name, int const tid,
+                            size_t& hash, record_index_t& record_index)
+{
+
+  auto const tid_ht = static_cast<hashtable_iterator_t_>(tid);
+
+  thread_hashtables_[tid_ht].query_insert(region_name,
+                                          "",
+                                          tid, null_call_depth,
+                                          hash, record_index);
+}
+
+void meto::Vernier::depth_insert(std::string_view const region_name, int const tid,
+          call_depth_t const call_depth_to_hash, size_t& hash, record_index_t& record_index) 
+{
+
+  auto constexpr tid_zero_tr = static_cast<traceback_index_t>(0);
+  auto const tid_tr = static_cast<traceback_index_t>(tid);
+  auto const tid_ht = static_cast<hashtable_iterator_t_>(tid);
+
+  // Three cases:
+  //   (i) The candidate entry has parent on the current thread.
+  //  (ii) The candidate does not have a parent on the current thread, but does
+  //       have a parent on the master thread. Applies to routines called in
+  //       OpenMP regions.
+  // (iii) There is no parent, so do not pass through a parent name.
+  //
+  // Note: There are three separate calls to query_insert for a reason: they
+  //       avoid having to instantiate a string, which is expensive.
+
+  if(call_depth_thread_ > 0){
+    //auto parent_index = thread_traceback_[tid].at(static_cast<traceback_index_t>(call_depth_thread_-1)).record_index_;
+    auto parent_index = thread_traceback_[tid_tr][(static_cast<traceback_index_t>(call_depth_thread_-1))].record_index_;
+    std::string_view parent_region_name = thread_hashtables_[tid_ht].get_region_name_by_index(parent_index);
+    thread_hashtables_[tid_ht].query_insert(region_name,
+                                            parent_region_name,
+                                            tid, call_depth_to_hash,
+                                            hash, record_index);
+  }
+  else if(call_depth_master_ > 0){
+    //auto parent_index = thread_traceback_[tid_zero_ht].at(static_cast<traceback_index_t>(call_depth_master_)).record_index_;
+    auto parent_index = thread_traceback_[tid_zero_tr][static_cast<traceback_index_t>(call_depth_master_)].record_index_;
+    std::string_view parent_region_name = thread_hashtables_[tid_zero_tr].get_region_name_by_index(parent_index);
+    thread_hashtables_[tid_ht].query_insert(region_name, parent_region_name,
+                                            tid, call_depth_to_hash,
+                                            hash, record_index);
+  }
+  else {
+    thread_hashtables_[tid_ht].query_insert(region_name, "",
+                                            tid, call_depth_to_hash,
+                                            hash, record_index);
+  }
+
 }
 
 /**
