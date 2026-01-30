@@ -17,7 +17,8 @@ if (BUILD_FORTRAN_TESTS)
   endfunction()
 
   if (ENABLE_MPI)
-    add_fortran_unit_test(TestVernier test_vernier_mod.pf)
+    add_fortran_unit_test(TestVernier      test_vernier_mod.pf)
+    add_fortran_unit_test(TestVernierScope test_vernier_scope_mod.pf)
   endif()
 
 endif ()
