@@ -14,6 +14,7 @@ include(CMakePackageConfigHelpers)
 # Add files source files to library. This is STATIC by default and SHARED when
 # the BUILD_SHARED_LIBS option is turned ON.
 add_library(${CMAKE_PROJECT_NAME}
+        vernier_scope.cpp
         vernier.cpp
         hashtable.cpp
         hashvec_handler.cpp
@@ -34,8 +35,9 @@ target_include_directories(${CMAKE_PROJECT_NAME}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         $<INSTALL_INTERFACE:include>)
 
-set(PUBLIC_HEADER_FILES vernier.h hashtable.h hashvec.h vernier_gettime.h
-          vernier_get_wtime.h vernier_mpi.h mpi_context.h error_handler.h)
+set(PUBLIC_HEADER_FILES vernier_scope.h vernier.h hashtable.h hashvec.h
+                        vernier_gettime.h vernier_get_wtime.h vernier_mpi.h
+                        mpi_context.h error_handler.h)
 
 # Link library to and external libs (also use project warnings and options).
 set (PLIBS OpenMP::OpenMP_CXX)
