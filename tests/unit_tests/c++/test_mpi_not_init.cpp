@@ -12,10 +12,10 @@
 using ::testing::ExitedWithCode;
 
 // Attempt to initialise Vernier without MPI being initialized.
-TEST(TestMPINotInit, MpiNotInitialised) {
+TEST(MPINotInitTest, MpiNotInitialised) {
 
   // clang-format off
-#ifdef USE_MPI
+#ifndef USE_VERNIER_MPI_STUB
   [[maybe_unused]] int ierr;
   EXPECT_EXIT(
       { meto::vernier.init(); }, ExitedWithCode(EXIT_FAILURE),

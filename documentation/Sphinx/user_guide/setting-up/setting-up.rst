@@ -37,6 +37,15 @@ It is also possible to use ``LD_LIBRARY_PATH`` instead of ``-Wl,-rpath=``:
 
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/lib
 
+If Vernier has been built without MPI support and is being used with
+C++, it can be compiled using the standard compiler and the
+`USE_VERNIER_MPI_STUB` pre-processor directive.  For example:
+
+.. code-block:: shell
+
+   # C++
+   c++ foo.cpp -DUSE_VERNIER_MPI_STUB -I/path/to/include -Wl,-rpath=/path/to/lib -L/path/to/lib -lvernier
+
 Including Vernier in a CMake Project
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -103,13 +112,25 @@ Environment Variables
      If this environment variable remains unset, then the default output format
      is the **drhook** option.
 
-   ``VERNIER_IO_MODE``
+   ``VERNIER_OUTPUT_MODE``
 
-     Determines the output mode to use. Currently only supports being set to 
-     **multi** but single-file-output may be added in the future.
+     Determines the output mode to use. Currently supported values are:
+
+     * **multi**: Every task writes to its own output file
+       
+     * **single**: All tasks write to a single global output file
+
+     If the environment variable is not set, **multi** mode is used.
 
    ``VERNIER_OUTPUT_FILENAME``
 
-     Sets the output filename, which is "vernier-output" by default. Vernier
-     will append the MPI rank onto the end of this name by default, resulting
-     in a file called `vernier-output-0` for the first MPI rank, for example.
+     Sets the output filename, which is ``vernier-output`` by
+     default.
+
+     Vernier will append the MPI rank onto the end of this
+     name when running in **multi** mode, resulting in a file called
+     `vernier-output-0` for the first MPI rank, for example.
+
+     Vernier will append ``-global`` to the name when running in
+     **single** mode and the file will contain formatted entries for
+     each task ordered by MPI rank.

@@ -50,9 +50,11 @@ meto::Vernier::TracebackEntry::TracebackEntry(
  * @param [in]  client_comm_handle  MPI communicator handle that Vernier will
  *                                  duplicate and use the duplicate.
  *                                  Defaults to MPI_COMM_WORLD.
+ * @param [in] tag  The tag to appear in the Vernier output filename.
  */
 
-void meto::Vernier::init(MPI_Comm const client_comm_handle) {
+void meto::Vernier::init(MPI_Comm const client_comm_handle,
+                         std::string_view tag) {
 
   // Set the maximum number of threads.
   max_threads_ = 1;
@@ -80,7 +82,7 @@ void meto::Vernier::init(MPI_Comm const client_comm_handle) {
   }
 
   // Initialise MPI context
-  mpi_context_.init(client_comm_handle);
+  mpi_context_.init(client_comm_handle, tag);
 
   // Set Vernier initialised.
   initialized_ = true;
@@ -90,6 +92,10 @@ void meto::Vernier::init(MPI_Comm const client_comm_handle) {
   assert(static_cast<int>(thread_traceback_.size()) == max_threads_);
   assert(mpi_context_.is_initialized());
   assert(initialized_);
+#ifndef NDEBUG
+  std::cout << "Vernier Initialised with communicator handle: "
+            << client_comm_handle << std::endl;
+#endif
 }
 
 /**

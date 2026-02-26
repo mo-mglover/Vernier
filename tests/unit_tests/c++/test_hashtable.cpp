@@ -146,6 +146,12 @@ TEST(HashTableTest, UpdateTimesTestBasic) {
   meto::vernier.finalize();
 }
 
+/*
+ * 
+ * 
+ * 
+ */
+
 TEST(HashTableTest,UpdateTimesTestDepth) {
 
   meto::vernier.init();
@@ -192,6 +198,24 @@ TEST(HashTableTest,UpdateTimesTestDepth) {
     EXPECT_GT(t2, 0.0);
     EXPECT_GT(t3, t2 );
   }
+
+  meto::vernier.finalize();
+}
+
+/*
+ * Check handling of long labels.  Short labels have already been
+ * tested, so try something longer than the maximum size, catch the
+ * exit code and check the error message
+ */
+TEST(HashTableTest, NameLengthTest) {
+
+  // Create a label that is too long
+  std::string label(PROF_STRING_BUFFER_LENGTH + 10, 'q');
+
+  meto::vernier.init();
+
+  EXPECT_EXIT(meto::vernier.start(label), testing::ExitedWithCode(1),
+              "Internal error: character buffer exhausted.");
 
   meto::vernier.finalize();
 }

@@ -18,12 +18,14 @@ Documentation for the project can be found [here](https://metoffice.github.io/Ve
 - C++17 compatible compiler.
 - CMake version 3.13 or newer.
 - GoogleTest version 1.11 or newer.
+- pFUnit version 4.4.1 or newer.
 
 ### Supported Compilers
 
 The code has been tested with the following compilers:
-- GCC versions: 10.2.0, 11.2.0
-- Clang versions: 12.0 
+- GCC versions: 10.2.0, 11.2.0, 12.2.0, 13, 14
+- Clang versions: 12.0, 18.0
+- Cray CCE 15.0.0
 
 ### Libraries 
 
@@ -33,7 +35,16 @@ The code has been tested with the following compilers:
 ### Testing Framework and Documentation
 
 The testing framework is GoogleTest (1.11.0).  
+
 Source code documentation is generated using Doxygen (minimum 1.8.5).
+
+The user guide is generated with sphinx with the following dependencies:
+
+* sphinx
+* pydata-sphinx-theme
+* sphinx-sitemap
+* sphinx-design
+
 
 ### Building profiler
 
@@ -55,12 +66,10 @@ make test
 The HTML Doxygen documentation is built by default when building the project and 
 the generated files can be found in `<build>/html`.
 
-To build only the Doxygen docs use `make doxygen-docs`. On installation the
-HTML pages are copied to `<installation_root>/share/docs`.
+To build only the Doxygen docs, configure cmake as above and use `make doxygendocs`.   
+On installation the HTML pages are copied to `<installation_root>/doxygen/html`.   
+These can be viewed with `<browser> index.html`.   
 
-#### Unit Test Coverage
-
-The unit test coverage is generated using `gcovr` which wraps `gcov` with additional
-functionality, such as multiple output format options.
-
-A detailed coverage report can be found [here](https://metoffice.github.io/profiler/coverage/).
+The user guide can be built using `make sphinxdocs`.   
+On installation the docs are copied to `<installation_root>/sphinx`.   
+These can be viewed with `<browser> index.html`.   

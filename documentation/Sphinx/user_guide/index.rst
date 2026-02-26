@@ -9,8 +9,9 @@ User Guide
 ==========
 
 .. toctree::
+   :maxdepth: 2
 
-   build-guide
-   setting-up
-   api
-   output
+   build-guide/index
+   setting-up/index
+   api/index
+   output/index

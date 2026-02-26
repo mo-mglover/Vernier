@@ -21,7 +21,7 @@ module vernier_mod
 
   !> The real kind for region timings.
   integer, public, parameter :: vrk = c_double
-  
+
   !-----------------------------------------------------------------------------
   ! Public interfaces / subroutines
   !-----------------------------------------------------------------------------
@@ -32,7 +32,7 @@ module vernier_mod
   public :: vernier_stop
   public :: vernier_write
   public :: vernier_get_total_walltime
-  public :: vernier_get_wtime 
+  public :: vernier_get_wtime
 
   !-----------------------------------------------------------------------------
   ! Interfaces
@@ -40,10 +40,12 @@ module vernier_mod
 
   interface
 
-    subroutine vernier_init(client_comm_handle)  &
+    subroutine interface_vernier_init(client_comm_handle, tag)  &
                bind(C, name='c_vernier_init')
-      integer, intent(in) :: client_comm_handle
-    end subroutine vernier_init
+      import :: c_char
+      integer,                       optional, intent(in) :: client_comm_handle
+      character(kind=c_char, len=1), optional, intent(in) :: tag(*)
+    end subroutine interface_vernier_init
 
     subroutine vernier_finalize() bind(C, name='c_vernier_finalize')
         !No arguments to handle
@@ -91,6 +93,36 @@ module vernier_mod
   !-----------------------------------------------------------------------------
   contains
 
+    !> @brief  Initialises Vernier.
+    !> @param [in]  client_comm_handle  Handle for the MPI communicator
+    !>                                  over which Vernier will operate.
+    !> @param [in] tag The tag to appear in the Vernier output filename.
+    !> @note   Region names need not be null terminated on entry to this
+    !>         routine.
+    subroutine vernier_init(client_comm_handle, tag)
+      implicit none
+
+      !Arguments
+      integer,          optional, intent(in) :: client_comm_handle
+      character(len=*), optional, intent(in) :: tag
+
+      !Local variables
+      character(len=:), allocatable :: local_tag
+
+      ! NB: Dual calls to interface_vernier_init() ought to be unnecessary,
+      ! since unallocated actual arguments passed to optional dummy arguments
+      ! count as not present in downstream code. We separate the calls here
+      ! (with and without local_tag) to accommodate a compiler bug. 
+      if (present(tag)) then
+        allocate(character(len=len_trim(tag)+1) :: local_tag)
+        call append_null_char(tag, local_tag, len_trim(tag))
+        call interface_vernier_init(client_comm_handle, local_tag)
+      else
+        call interface_vernier_init(client_comm_handle)
+      end if
+
+    end subroutine vernier_init
+
     !> @brief  Start profiling a code region.
     !> @param [out] hash_out      The unique hash for this region.
     !> @param [in]  region_name   The region name.
@@ -117,7 +149,7 @@ module vernier_mod
     !> @brief  Adds a null character to the end of a string.
     !> @param [in]  strlen      Length of the unterminated string.
     !> @param [in]  string_in   Unterminated string.
-    !> @param [out] string_out  Null-terminated string. 
+    !> @param [out] string_out  Null-terminated string.
     !> @note  Tests suggested that adding the null character in this manner, as
     !>     opposed to the concatenation operator (//) has performance benefits.
     subroutine append_null_char(string_in, string_out, strlen)
