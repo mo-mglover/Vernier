@@ -131,3 +131,11 @@ MPI_Comm meto::MPIContext::get_handle() { return comm_handle_; }
  */
 
 std::string meto::MPIContext::get_tag() const { return tag_; }
+
+/**
+ * @brief Is the calling rank the root of the communicator?
+ * @returns True if this is the root rank, false otherwise.
+ */
+
+bool meto::MPIContext::on_root() { return comm_rank_ == comm_root_; }
+

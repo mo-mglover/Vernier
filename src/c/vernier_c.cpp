@@ -29,6 +29,7 @@ void c_vernier_start_part1();
 void c_vernier_start_part2(long int &, char const *);
 void c_vernier_stop(long int const &);
 void c_vernier_write();
+void c_vernier_write_affinity_map();
 double c_vernier_get_total_walltime(long int const &, int const &);
 double c_vernier_get_wtime();
 }
@@ -101,6 +102,12 @@ void c_vernier_stop(long int const &hash_in) {
  */
 
 void c_vernier_write() { meto::vernier.write(); }
+
+/**
+ * @brief Write the affinity map.
+ */
+
+void c_vernier_write_affinity_map() { meto::vernier.write_affinity_map(); }
 
 /**
  * @brief  Get the total wallclock time for the specified region on the

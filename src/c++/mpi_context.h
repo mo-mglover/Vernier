@@ -42,6 +42,8 @@ private:
   bool initialized_;
   std::string tag_;
 
+  int static constexpr comm_root_ = 0;
+
 public:
   // Constructor
   MPIContext();
@@ -55,6 +57,7 @@ public:
   // Getters
   int get_size();
   int get_rank();
+  bool on_root();
   MPI_Comm get_handle();
 
   std::string get_tag() const;

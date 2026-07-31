@@ -4,6 +4,7 @@
  under which the code may be used.
 \*----------------------------------------------------------------------------*/
 
+#include "affinity.h"
 #include "vernier.h"
 #include "error_handler.h"
 #include "hashvec_handler.h"
@@ -293,6 +294,25 @@ void meto::Vernier::write() {
   output_data.sort();
   output_data.write();
 }
+
+/**
+ * @brief  Write affinity map
+ *
+ * @note  The output file seedname is  "vernier-affinity-map".
+ *
+ */
+
+ void meto::Vernier::write_affinity_map() {
+
+  if (!initialized_) {
+    meto::error_handler("Vernier::write_affinity_map. Vernier not initialised.",
+                        EXIT_FAILURE);
+  }
+
+  Affinity affinity;
+  affinity.write_map(mpi_context_);
+
+ }
 
 /**
  * @brief  Get the total (inclusive) time taken by a region and everything below

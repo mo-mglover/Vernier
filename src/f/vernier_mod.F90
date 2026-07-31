@@ -31,6 +31,7 @@ module vernier_mod
   public :: vernier_start
   public :: vernier_stop
   public :: vernier_write
+  public :: vernier_write_affinity_map
   public :: vernier_get_total_walltime
   public :: vernier_get_wtime
 
@@ -72,6 +73,11 @@ module vernier_mod
     subroutine vernier_write() bind(C, name='c_vernier_write')
         !No arguments to handle
     end subroutine vernier_write
+
+    subroutine vernier_write_affinity_map() &
+               bind(C, name='c_vernier_write_affinity_map')
+        !No arguments to handle
+    end subroutine vernier_write_affinity_map
 
     function vernier_get_total_walltime(hash_in, thread_id) result(walltime) &
              bind(C, name='c_vernier_get_total_walltime')
