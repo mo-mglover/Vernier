@@ -122,10 +122,9 @@ void meto::Affinity::write_map(meto::MPIContext& mpi_context)
 {
 
   // Internal variables
-  MPI_Status recv_status;
-  MPI_Status send_status;
-  MPI_Request send_request;
-  // MPI_Datatype mpi_buffer;
+  MPI_Datatype mpi_buffer;
+  int record_length;
+  int max_record_length;
 
   std::size_t max_cpus = static_cast<std::size_t>(max_available_cpus());
   std::string mask(max_cpus, '.');
@@ -135,7 +134,7 @@ void meto::Affinity::write_map(meto::MPIContext& mpi_context)
 
       int thread_id=0;
       #ifdef _OPENMP
-      thread_id = omp_get_thread_num();
+        thread_id = omp_get_thread_num();
       #endif
 
       int core_id = running_on_core();
@@ -150,56 +149,66 @@ void meto::Affinity::write_map(meto::MPIContext& mpi_context)
         } // critical
     } // parallel
 
-    int num_cpus = num_available_cpus();
-    std::ostringstream oss;
-    oss << std::setw(8) << std::setfill('0') << mpi_context.get_rank() << " : "
-        << mask << " : "
-        << num_cpus;
+  // Construct the record on each individual rank, and find the maximum length
+  // of all of them.
+  int num_cpus = num_available_cpus();
 
-    // Ensure send and receive buffers have the same length.
-    std::string send_buffer = oss.str();
-    std::string recv_buffer(send_buffer.length(), '+');
+  std::ostringstream rss;
+  rss << std::setw(8) << std::setfill('0') << mpi_context.get_rank() << " : "
+      << mask << " : "
+      << std::setw(3) << std::setfill(' ') << num_cpus << "\n";
 
-    // Everyone sends to root
-    MPI_Isend(send_buffer.data(), send_buffer.length(), MPI_CHARACTER,
-                   0, mpi_context.get_rank(),
-                   mpi_context.get_handle(), &send_request);
+  record_length = static_cast<int>(rss.str().length());
+  MPI_Allreduce(&record_length, &max_record_length, 1, MPI_INT, MPI_MAX,
+                mpi_context.get_handle());
 
-  // Writer receives and writes to file
-  if(mpi_context.on_root()) {
+  // Having found the maximum record length, pad out the record on each
+  // individual MPI rank with spaces.
+  rss << std::string(
+      static_cast<std::string::size_type>(max_record_length - record_length), ' ');
 
-    std::ofstream mapfile("vernier-affinity-map.txt");
+  MPI_Type_contiguous(max_record_length, MPI_CHAR, &mpi_buffer);
+  MPI_Type_commit(&mpi_buffer);
 
-    mapfile << "--> AFFINITY MAP <--" << "\n\n";
+  // Build the header on all ranks for now.
+  std::ostringstream hss;
+  hss << "--> AFFINITY MAP <--" << "\n\n"
+      << "Maximum number of (logical) cores: "
+      << max_cpus << "\n\n"
+      << "Thread binding map, key:" << "\n\n"
+      << "MPI rank"
+      << " : ...THREADS..ON..CORES... : "
+      << "Num. cores available to threads" << "\n\n"
+      << std::string(11, ' ')
+      << "Cores ---->" << "\n";
+  std::string header = hss.str();
+  MPI_Offset header_length = static_cast<MPI_Offset>(header.length());
 
-    // Print maximum of logical cores
-    mapfile << "Maximum number of (logical) cores: "
-            << max_cpus << "\n\n";
+  // Collective file open
+  MPI_File mapfile;
+  MPI_File_open(mpi_context.get_handle(), "vernier-affinity-map.txt",
+                MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &mapfile);
 
-    // Thread affinity map
-    mapfile << "Thread binding map, key:" << "\n\n";
-
-    mapfile << "MPI rank"
-            << " : ...THREADS..ON..CORES... : "
-            << "Num. cores available to threads" << "\n\n";
-    mapfile << std::string(11, ' ')
-            << "Cores ---->" << "\n";
-
-    for (int irank=0; irank< mpi_context.get_size() ; ++irank)
-      {
-        MPI_Recv(recv_buffer.data(), recv_buffer.length(), MPI_CHARACTER,
-                 irank, irank,
-                 mpi_context.get_handle(), &recv_status);
-        mapfile << recv_buffer << "\n";
-      }
-    mapfile << std::endl;
-
-    // Close the file
-    mapfile.close();
+  // Root writes the header at offset 0
+  if (mpi_context.on_root()) {
+    MPI_File_write_at(mapfile, 0,
+                      header.data(), static_cast<int>(header.size()),
+                      MPI_CHARACTER, MPI_STATUS_IGNORE);
   }
 
-  // Send completed?
-  MPI_Wait(&send_request, &send_status);
+  // Each rank writes its own record
+  MPI_Offset my_offset = header_length
+                       + (static_cast<MPI_Offset>(mpi_context.get_rank())
+                          * record_length);
+
+  // Create a view for each task which represents a unique, non-overlapping region.
+  MPI_File_set_view(mapfile, my_offset, MPI_CHAR, mpi_buffer, "native", MPI_INFO_NULL);
+
+  MPI_File_write(mapfile, rss.str().c_str(), max_record_length, MPI_CHAR, MPI_STATUS_IGNORE);
+
+  // Close the file collectively.
+  MPI_File_close(&mapfile);
+  MPI_Type_free(&mpi_buffer);
 
 }
 
