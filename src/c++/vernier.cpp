@@ -304,14 +304,13 @@ void meto::Vernier::write() {
 
  void meto::Vernier::write_affinity_map() {
 
-  if (!initialized_) {
-    meto::error_handler("Vernier::write_affinity_map. Vernier not initialised.",
-                        EXIT_FAILURE);
-  }
+   if (!initialized_) {
+     meto::error_handler("Vernier::write_affinity_map. Vernier not initialised.",
+                         EXIT_FAILURE);
+   }
 
-  Affinity affinity;
-  affinity.write_map(mpi_context_);
-
+   meto::Affinity affinity;
+   affinity.write_map(mpi_context_, "vernier-affinity-map.txt");
  }
 
 /**

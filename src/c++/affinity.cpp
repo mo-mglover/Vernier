@@ -4,104 +4,32 @@
  *------------------------------------------------------------------------------
  */
 
-#include <fstream>
 #include <sched.h>
 #include <stdio.h>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <fstream>
+#include <memory>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <omp.h>
+#ifdef _OPENMP
+  #include <omp.h>
+#endif
 
 #include "affinity.h"
 #include "vernier_mpi.h"
 
-/*------------------------------------------------------------------------------
-* SYNOPSIS
-*   int max_available_cpus_C()
-*
-* DESCRIPTION
-*   Returns the maximum number of cores (real and virtual) available on a node.
-*-------------------------------------------------------------------------------
-*/
+//
+// Constructors.
+//
 
-int meto::Affinity::max_available_cpus()
-{
-  int max_cpus=VERNIER_HIGH_NUM_CPUS_VALUE;
-  max_cpus = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
-  return max_cpus;
-}
+meto::Affinity::Affinity()
+  : system_calls_(std::make_unique<meto::MachineAffinitySysCalls>()) {}
 
-/*------------------------------------------------------------------------------
-* SYNOPSIS
-*   int num_available_cpus()
-*
-* DESCRIPTION
-*   Returns the number of cores (real and virtual) on which this thread may run.
-*   This number will be unity if a thread is bound to run on a single (logical)
-*   core.
-*-------------------------------------------------------------------------------
-*/
-
-int meto::Affinity::num_available_cpus()
-{
-  {
-    int num_cpus;
-    cpu_set_t cpumask;
-    pid_t tid;
-
-    tid = static_cast<pid_t>(syscall(SYS_gettid));
-    CPU_ZERO(&cpumask);
-
-    sched_getaffinity(tid, sizeof(cpu_set_t), &cpumask);
-
-    num_cpus = cpumask_weight(&cpumask);
-
-    return num_cpus;
-  }
-}
-
-/*------------------------------------------------------------------------------
-* SYNOPSIS
-*   int cpumask_weight()
-*
-* DESCRIPTION
-*   Returns the number of elements of the cpumask that are set.
-*-------------------------------------------------------------------------------
-*/
-
-int meto::Affinity::cpumask_weight(cpu_set_t * cpumask)
-{
-  int weight;
-  int index;
-
-  weight=0;
-  for (index=0; index < CPU_SETSIZE; ++index){
-    if (CPU_ISSET( static_cast<size_t>(index), cpumask)){weight++;}
-  }
-
-  return weight;
-}
-
-/*------------------------------------------------------------------------------
-* SYNOPSIS
-*   int running_on_core()
-*
-* DESCRIPTION
-*   Returns the ID of the core on which the calling task/thread is running.
-*-------------------------------------------------------------------------------
-*/
-
-int meto::Affinity::running_on_core()
-{
-  int core=VERNIER_HIGH_NUM_CPUS_VALUE;
-  core = sched_getcpu();
-  return core;
-}
-
+meto::Affinity::Affinity(std::unique_ptr<meto::AffinitySysCalls> system_calls)
+  : system_calls_(std::move(system_calls)) {}
 
 /*-------------------------------------------------------------------------------
 * SYNOPSIS
@@ -118,7 +46,7 @@ int meto::Affinity::running_on_core()
 *-------------------------------------------------------------------------------
 */
 
-void meto::Affinity::write_map(meto::MPIContext& mpi_context)
+void meto::Affinity::write_map(meto::MPIContext& mpi_context, std::string const& fname)
 {
 
   // Internal variables
@@ -126,7 +54,7 @@ void meto::Affinity::write_map(meto::MPIContext& mpi_context)
   int record_length;
   int max_record_length;
 
-  std::size_t max_cpus = static_cast<std::size_t>(max_available_cpus());
+  std::size_t max_cpus = static_cast<std::size_t>(system_calls_->max_available_cpus());
   std::string mask(max_cpus, '.');
 
   #pragma omp parallel default(none) shared(mask)
@@ -137,7 +65,7 @@ void meto::Affinity::write_map(meto::MPIContext& mpi_context)
         thread_id = omp_get_thread_num();
       #endif
 
-      int core_id = running_on_core();
+      int core_id = system_calls_->running_on_core();
       char hex_char = hex(thread_id);
 
       // If more than one thread is running on the same core, show that with a
@@ -151,7 +79,7 @@ void meto::Affinity::write_map(meto::MPIContext& mpi_context)
 
   // Construct the record on each individual rank, and find the maximum length
   // of all of them.
-  int num_cpus = num_available_cpus();
+  int num_cpus = system_calls_->num_available_cpus();
 
   std::ostringstream rss;
   rss << std::setw(8) << std::setfill('0') << mpi_context.get_rank() << " : "
@@ -186,7 +114,7 @@ void meto::Affinity::write_map(meto::MPIContext& mpi_context)
 
   // Collective file open
   MPI_File mapfile;
-  MPI_File_open(mpi_context.get_handle(), "vernier-affinity-map.txt",
+  MPI_File_open(mpi_context.get_handle(), fname.c_str(),
                 MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &mapfile);
 
   // Root writes the header at offset 0
@@ -234,4 +162,87 @@ char meto::Affinity::hex(int num)
 
   return digit;
 
+}
+
+/*------------------------------------------------------------------------------
+* SYNOPSIS
+*   int max_available_cpus_C()
+*
+* DESCRIPTION
+*   Returns the maximum number of cores (real and virtual) available on a node.
+*-------------------------------------------------------------------------------
+*/
+
+int meto::MachineAffinitySysCalls::max_available_cpus()
+{
+  int max_cpus=VERNIER_HIGH_NUM_CPUS_VALUE;
+  max_cpus = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
+  return max_cpus;
+}
+
+/*------------------------------------------------------------------------------
+* SYNOPSIS
+*   int num_available_cpus()
+*
+* DESCRIPTION
+*   Returns the number of cores (real and virtual) on which this thread may run.
+*   This number will be unity if a thread is bound to run on a single (logical)
+*   core.
+*-------------------------------------------------------------------------------
+*/
+
+int meto::MachineAffinitySysCalls::num_available_cpus()
+{
+  {
+    int num_cpus;
+    cpu_set_t cpumask;
+    pid_t tid;
+
+    tid = static_cast<pid_t>(syscall(SYS_gettid));
+    CPU_ZERO(&cpumask);
+
+    sched_getaffinity(tid, sizeof(cpu_set_t), &cpumask);
+
+    num_cpus = cpumask_weight(&cpumask);
+
+    return num_cpus;
+  }
+}
+
+/*------------------------------------------------------------------------------
+* SYNOPSIS
+*   int cpumask_weight()
+*
+* DESCRIPTION
+*   Returns the number of elements of the cpumask that are set.
+*-------------------------------------------------------------------------------
+*/
+
+int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t * cpumask)
+{
+  int weight;
+  int index;
+
+  weight=0;
+  for (index=0; index < CPU_SETSIZE; ++index){
+    if (CPU_ISSET( static_cast<size_t>(index), cpumask)){weight++;}
+  }
+
+  return weight;
+}
+
+/*------------------------------------------------------------------------------
+* SYNOPSIS
+*   int running_on_core()
+*
+* DESCRIPTION
+*   Returns the ID of the core on which the calling task/thread is running.
+*-------------------------------------------------------------------------------
+*/
+
+int meto::MachineAffinitySysCalls::running_on_core()
+{
+  int core=VERNIER_HIGH_NUM_CPUS_VALUE;
+  core = sched_getcpu();
+  return core;
 }

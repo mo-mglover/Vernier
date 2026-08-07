@@ -8,6 +8,11 @@
 #endif
 
 #include <sched.h>
+#include <memory>
+#include <string>
+#ifdef _OPENMP
+  #include <omp.h>
+#endif
 
 #include "mpi_context.h"
 
@@ -15,19 +20,50 @@
 
 namespace meto{
 
+// Forward declarations
+class AffinitySysCalls;
+
+// Affinity class itsel
 class Affinity{
 
   private:
 
-    // Methods
-    int max_available_cpus();
-    int num_available_cpus();
-    int cpumask_weight(cpu_set_t*);
-    int running_on_core();
-    char hex(int);
+    // Data members
+    std::unique_ptr<AffinitySysCalls> system_calls_;
 
   public:
-    void write_map(meto::MPIContext&);
+
+    // Constructors
+    Affinity();
+    explicit Affinity(std::unique_ptr<meto::AffinitySysCalls>);
+
+    char hex(int);
+    void write_map(meto::MPIContext&, std::string const&);
+
+};
+
+// System calls
+class AffinitySysCalls{
+
+  public:
+
+    virtual ~AffinitySysCalls() = default;
+
+    virtual int max_available_cpus()       = 0;
+    virtual int num_available_cpus()       = 0;
+    virtual int running_on_core()          = 0;
+    virtual int cpumask_weight(cpu_set_t*) = 0;
+
+};
+
+class MachineAffinitySysCalls : public AffinitySysCalls{
+
+  public:
+
+    int max_available_cpus()       override;
+    int num_available_cpus()       override;
+    int running_on_core()          override;
+    int cpumask_weight(cpu_set_t*) override;
 
 };
 
