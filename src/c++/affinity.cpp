@@ -46,7 +46,7 @@ meto::Affinity::Affinity(std::unique_ptr<meto::AffinitySysCalls> system_calls)
 *-------------------------------------------------------------------------------
 */
 
-void meto::Affinity::write_map(meto::MPIContext& mpi_context, std::string const& fname)
+void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string const& fname)
 {
 
   // Internal variables

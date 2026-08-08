@@ -109,21 +109,21 @@ void meto::MPIContext::finalize() {
  * @returns The MPI rank.
  */
 
-int meto::MPIContext::get_rank() { return comm_rank_; }
+int meto::MPIContext::get_rank() const { return comm_rank_; }
 
 /**
  * @brief Gets the size of the MPI communicator from an MPIContext object.
  * @returns The MPI communicator size.
  */
 
-int meto::MPIContext::get_size() { return comm_size_; }
+int meto::MPIContext::get_size() const { return comm_size_; }
 
 /**
  * @brief Gets the MPI communicator handle.
  * @returns The MPI communicator handle.
  */
 
-MPI_Comm meto::MPIContext::get_handle() { return comm_handle_; }
+MPI_Comm meto::MPIContext::get_handle() const { return comm_handle_; }
 
 /**
  * @brief Gets the identifying tag.
@@ -137,5 +137,5 @@ std::string meto::MPIContext::get_tag() const { return tag_; }
  * @returns True if this is the root rank, false otherwise.
  */
 
-bool meto::MPIContext::on_root() { return comm_rank_ == comm_root_; }
+bool meto::MPIContext::on_root() const { return comm_rank_ == comm_root_; }
 
