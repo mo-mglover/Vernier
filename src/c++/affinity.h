@@ -49,21 +49,23 @@ class AffinitySysCalls{
 
     virtual ~AffinitySysCalls() = default;
 
-    virtual int max_available_cpus()       = 0;
-    virtual int num_available_cpus()       = 0;
-    virtual int running_on_core()          = 0;
-    virtual int cpumask_weight(cpu_set_t*) = 0;
+    virtual int max_available_cpus() const = 0;
+    virtual int num_available_cpus() const = 0;
+    virtual int running_on_core()    const = 0;
 
 };
 
 class MachineAffinitySysCalls : public AffinitySysCalls{
 
+  private:
+
+    int cpumask_weight(cpu_set_t*) const;
+
   public:
 
-    int max_available_cpus()       override;
-    int num_available_cpus()       override;
-    int running_on_core()          override;
-    int cpumask_weight(cpu_set_t*) override;
+    int max_available_cpus() const override;
+    int num_available_cpus() const override;
+    int running_on_core()    const override;
 
 };
 

@@ -173,7 +173,7 @@ char meto::Affinity::hex(int num)
 *-------------------------------------------------------------------------------
 */
 
-int meto::MachineAffinitySysCalls::max_available_cpus()
+int meto::MachineAffinitySysCalls::max_available_cpus() const
 {
   int max_cpus=VERNIER_HIGH_NUM_CPUS_VALUE;
   max_cpus = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
@@ -191,7 +191,7 @@ int meto::MachineAffinitySysCalls::max_available_cpus()
 *-------------------------------------------------------------------------------
 */
 
-int meto::MachineAffinitySysCalls::num_available_cpus()
+int meto::MachineAffinitySysCalls::num_available_cpus() const
 {
   {
     int num_cpus;
@@ -218,7 +218,7 @@ int meto::MachineAffinitySysCalls::num_available_cpus()
 *-------------------------------------------------------------------------------
 */
 
-int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t * cpumask)
+int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t* cpumask) const
 {
   int weight;
   int index;
@@ -240,7 +240,7 @@ int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t * cpumask)
 *-------------------------------------------------------------------------------
 */
 
-int meto::MachineAffinitySysCalls::running_on_core()
+int meto::MachineAffinitySysCalls::running_on_core() const
 {
   int core=VERNIER_HIGH_NUM_CPUS_VALUE;
   core = sched_getcpu();

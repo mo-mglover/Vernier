@@ -29,18 +29,16 @@ int  get_thread_num();
 
 class MockOneThreadPerCore : public meto::AffinitySysCalls {
   public:
-    int cpumask_weight(cpu_set_t*) override {return -999;}
-    int max_available_cpus() override { return 64;}
-    int num_available_cpus() override { return 1;}
-    int running_on_core()    override { return get_thread_num();}
+    int max_available_cpus() const override { return 64;}
+    int num_available_cpus() const override { return 1;}
+    int running_on_core()    const override { return get_thread_num();}
 };
 
 class MockTwoThreadsAlternateCores : public meto::AffinitySysCalls {
   public:
-    int cpumask_weight(cpu_set_t*) override {return -999;}
-    int max_available_cpus() override { return 64;}
-    int num_available_cpus() override { return 1;}
-    int running_on_core()    override { return (get_thread_num()/2)*2;}
+    int max_available_cpus() const override { return 64;}
+    int num_available_cpus() const override { return 1;}
+    int running_on_core()    const override { return (get_thread_num()/2)*2;}
 };
 
 //-------------------------------------------------------------------------------
