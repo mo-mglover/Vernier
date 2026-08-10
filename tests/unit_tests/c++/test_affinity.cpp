@@ -144,6 +144,8 @@ TEST(AffinityTest, TestSequence) {
   EXPECT_EQ(str, sequence) 
   << "Generated string does not match expected sequence.";
 
+  mpi_context.finalize();
+
 }
 
 /**
