@@ -113,7 +113,7 @@ TEST(AffinityTest, TestSequence) {
   int index = 0;
   std::string str(static_cast<std::size_t>(max_available_cpus), '.');
   std::generate(str.begin(), str.end(), [&index, &affinity]() {
-    return affinity.hex(index++);
+    return affinity.thread_id_to_char(index++);
   });
 
   EXPECT_EQ(str, sequence) 

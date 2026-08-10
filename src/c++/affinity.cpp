@@ -61,13 +61,13 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
       #endif
 
       int core_id = system_calls_->running_on_core();
-      char hex_char = hex(thread_id);
+      char thread_id_char = thread_id_to_char(thread_id);
 
       // If more than one thread is running on the same core, show that with a
       // hash symbol.
       #pragma omp critical
         {
-          if (mask.at(core_id) == '.'){mask.at(core_id) = hex_char;}
+          if (mask.at(core_id) == '.'){mask.at(core_id) = thread_id_char;}
           else                        {mask.at(core_id) = '#';}
         } // critical
     } // parallel
@@ -150,17 +150,17 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
  *          expected. Threads with IDs higher than 62 appear as a tilde.
  */
 
-char meto::Affinity::hex(int num)
+char meto::Affinity::thread_id_to_char(int num)
 {
 
-  char digit;
+  char thread_id_char;
 
-  if      (num < 10) {digit = static_cast<char>('0' + num);}        //  10 numerical digits
-  else if (num < 36) {digit = static_cast<char>('a' + (num-10));}   // +26 lowercase digits
-  else if (num < 62) {digit = static_cast<char>('A' + (num-36));}   // +26 uppercase digits
-  else               {digit = '~';}
+  if      (num < 10) {thread_id_char = static_cast<char>('0' + num);}        //  10 numerical digits
+  else if (num < 36) {thread_id_char = static_cast<char>('a' + (num-10));}   // +26 lowercase letters
+  else if (num < 62) {thread_id_char = static_cast<char>('A' + (num-36));}   // +26 uppercase letters
+  else               {thread_id_char = '~';}
 
-  return digit;
+  return thread_id_char;
 
 }
 

@@ -52,7 +52,7 @@ class Affinity{
     Affinity();
     explicit Affinity(std::unique_ptr<meto::AffinitySysCalls>);
 
-    char hex(int);
+    char thread_id_to_char(int);
     void write_map(meto::MPIContext const&, std::string const&);
 
 };
