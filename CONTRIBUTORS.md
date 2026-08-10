@@ -7,3 +7,4 @@
 | oakleybrunt     | Oakley Brunt     | Met Office  | 2026-03-09 |
 | EdHone          | Ed Hone          | Met Office  | 2026-03-20 |
 | t00sa           | Sam Clarke-Green | Met Office  | 2026-03-26 |
+| mo-mglover      | Matthew Glover   | Met Office  | 2026-08-10 |
