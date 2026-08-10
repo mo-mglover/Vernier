@@ -9,23 +9,24 @@
   #include <omp.h>
 #endif
 
-#include <iostream>
 #include <fstream>
 #include <iterator>
+#include <filesystem>
 #include <algorithm>
 #include <string>
+#include <utility>
 
 #include "mpi_context.h"
 #include "affinity.h"
 
 // Forward declarations
-void check_characters(std::string const&, char, int const&);
+void check_characters(std::string const&, std::vector<std::pair<char, int>> const&);
 int  get_max_threads();
 int  get_thread_num();
 
-//-------------------------------------------------------------------------------
-// System call mocking
-//-------------------------------------------------------------------------------
+/**
+ * System call mocking
+ */
 
 class MockOneThreadPerCore : public meto::AffinitySysCalls {
   public:
@@ -41,9 +42,9 @@ class MockTwoThreadsAlternateCores : public meto::AffinitySysCalls {
     int running_on_core()    const override { return (get_thread_num()/2)*2;}
 };
 
-//-------------------------------------------------------------------------------
-// One thread per core
-//-------------------------------------------------------------------------------
+/**
+ * One thread per core
+ */
 
 TEST(AffinityTest, OneThreadPerCore) {
 
@@ -58,17 +59,29 @@ TEST(AffinityTest, OneThreadPerCore) {
   std::string fname = "vernier-affinity-one-thread-per-core.txt";
   affinity.write_map(mpi_context, fname);
 
-  int constexpr expected_hashes_per_line = 0;
-  check_characters(fname, '#', expected_hashes_per_line);
-  check_characters(fname, '.', max_available_cpus - get_max_threads());
+  // Check that the number of hashes and dots are as expected, as written to the
+  // file.
+  mpi_context.barrier();
+  if (mpi_context.on_root()) {
+    int constexpr expected_hashes_per_line = 0;
+    check_characters(
+      fname,
+      {
+        {'#', expected_hashes_per_line},
+        {'.', max_available_cpus - get_max_threads()}
+      }
+    );
+    // Remove the file to allow a clean re-test.
+    EXPECT_TRUE(std::filesystem::remove(fname));
+  }
 
   mpi_context.finalize();
 
 }
 
-//-------------------------------------------------------------------------------
-// Main test
-//-------------------------------------------------------------------------------
+/**
+ * Two threads bound to alternate cores.
+ */
 
 TEST(AffinityTest, TwoThreadsAlternateCores) {
 
@@ -83,17 +96,29 @@ TEST(AffinityTest, TwoThreadsAlternateCores) {
   std::string fname = "vernier-affinity-two-threads-alternate-cores.txt";
   affinity.write_map(mpi_context, fname);
 
-  int const expected_hashes_per_line = (get_max_threads()+1)/2;
-  check_characters(fname, '#', expected_hashes_per_line);
-  check_characters(fname, '.', max_available_cpus - expected_hashes_per_line);
+  // Check that the number of hashes and dots are as expected, as written to the
+  // file.
+  mpi_context.barrier();
+  if (mpi_context.on_root()) {
+    int const expected_hashes_per_line = (get_max_threads()+1)/2;
+    check_characters(
+      fname,
+      {
+        {'#', expected_hashes_per_line},
+        {'.', max_available_cpus - expected_hashes_per_line}
+      }
+    );
+    // Remove the file to allow a clean re-test.
+    EXPECT_TRUE(std::filesystem::remove(fname));
+  }
 
   mpi_context.finalize();
 
 }
 
-//-------------------------------------------------------------------------------
-// Main test
-//-------------------------------------------------------------------------------
+/**
+ * Test that the single-character representations of thread IDs are as expected.
+ */
 
 TEST(AffinityTest, TestSequence) {
 
@@ -121,11 +146,15 @@ TEST(AffinityTest, TestSequence) {
 
 }
 
-//-------------------------------------------------------------------------------
-// Check characters
-//-------------------------------------------------------------------------------
+/**
+ * Check that there are the expected number of instances of the specified
+ * characters in each MPI rank record.
+ */
 
-void check_characters(std::string const& fname, char digit, int const& expected_per_line) {
+void check_characters(
+  std::string const& fname,
+  std::vector<std::pair<char, int>> const& expected_char_counts
+) {
 
   std::ifstream file (fname);
   EXPECT_TRUE(file.is_open());
@@ -140,26 +169,37 @@ void check_characters(std::string const& fname, char digit, int const& expected_
     }
   }
 
+  // Loop over records from each MPI rank.
   while(std::getline(file, line_in_file)) {
     ++line_number;
 
-    auto num_matches_in_line = std::count(
-      line_in_file.begin(),
-      line_in_file.end(),
-      digit
-    );
+    // Loop over characters to check.
+    for (auto const& [find_char, expected_count] : expected_char_counts) {
+      auto num_matches_in_line = std::count(
+        line_in_file.begin(),
+        line_in_file.end(),
+        find_char
+      );
 
-    EXPECT_EQ(num_matches_in_line, expected_per_line)
-      << "Incorrect number of matches of " << digit 
-      << " on line: " << line_number << ":\n"
-      << line_in_file;
+      EXPECT_EQ(num_matches_in_line, expected_count)
+        << "Incorrect number of matches of " << find_char
+        << " on line: " << line_number << ":\n"
+        << line_in_file;
+    }
 
   }
+
+  // Catch premature end-of-file.
+  EXPECT_GT(line_number, 0);
+
+  // Close the file
+  file.close();
+
 }
 
-//-------------------------------------------------------------------------------
-// Get the number of threads
-//-------------------------------------------------------------------------------
+/**
+ * Get the number of threads.
+ */
 
 int get_max_threads() {
 
@@ -171,9 +211,9 @@ int get_max_threads() {
 
 }
 
-//-------------------------------------------------------------------------------
-// Get the thread ID
-//-------------------------------------------------------------------------------
+/**
+ * Get the thread ID.
+ */
 
 int get_thread_num() {
 

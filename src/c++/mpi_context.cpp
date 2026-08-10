@@ -105,6 +105,19 @@ void meto::MPIContext::finalize() {
 }
 
 /**
+ * @brief  Barrier call for Vernier MPI context.
+ */
+
+void meto::MPIContext::barrier() {
+  int ierr = MPI_Barrier(comm_handle_);
+  if (ierr != MPI_SUCCESS) {
+    meto::error_handler(
+        "MPIContext::barrier. Synchronisation failed.",
+        EXIT_FAILURE);
+  }
+}
+
+/**
  * @brief Gets the MPI rank from an MPIContext object.
  * @returns The MPI rank.
  */

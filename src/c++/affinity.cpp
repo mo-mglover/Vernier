@@ -44,14 +44,30 @@ meto::Affinity::Affinity(std::unique_ptr<meto::AffinitySysCalls> system_calls)
 void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string const& fname)
 {
 
-  // Internal variables
-  MPI_Datatype mpi_buffer;
-  int record_length;
-  int max_record_length;
-
+  // Maximum number of logical cores on a node.
   std::size_t max_cpus = static_cast<std::size_t>(system_calls_->max_available_cpus());
-  std::string mask(max_cpus, '.');
 
+  // Build the header on all ranks for now.
+  std::ostringstream hss;
+  hss << "--> AFFINITY MAP <--" << "\n\n"
+      << "Maximum number of (logical) cores: "
+      << max_cpus << "\n\n"
+      << "Thread binding map, key:" << "\n\n"
+      << "    . = No threads running on this core.\n"
+      << "    # = Multiple threads running on this core.\n"
+      << "  0-9 = Threads 0-9.\n"
+      << "  a-z = Threads 10-35.\n"
+      << "  A-Z = Threads 36-61.\n"
+      << "    ~ = Threads 62 and greater.\n\n"
+      << "MPI rank"
+      << " : ...THREADS..ON..CORES... : "
+      << "Num. cores available for migration." << "\n\n"
+      << std::string(11, ' ')
+      << "Cores ---->" << "\n";
+  std::string header = hss.str();
+
+  // Construct the mask for each rank.
+  std::string mask(max_cpus, '.');
   #pragma omp parallel default(none) shared(mask)
     {
 
@@ -72,16 +88,31 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
         } // critical
     } // parallel
 
-  // Construct the record on each individual rank, and find the maximum length
-  // of all of them.
+  // Construct the record on each individual rank.
   int num_cpus = system_calls_->num_available_cpus();
-
   std::ostringstream rss;
   rss << std::setw(8) << std::setfill('0') << mpi_context.get_rank() << " : "
       << mask << " : "
       << std::setw(3) << std::setfill(' ') << num_cpus << "\n";
 
-  record_length = static_cast<int>(rss.str().length());
+#ifdef USE_VERNIER_MPI_STUB
+
+  // Rather than dummy out all the MPI calls, replace with a simple file open
+  // and write when running without MPI.
+
+  std::ofstream os(fname);
+
+  os << header;
+  os << rss.str();
+
+  os.flush();
+  os.close();
+
+#else // USE_VERNIER_MPI_STUB
+
+  // Find the maximum record length across MPI ranks.
+  int max_record_length;
+  int record_length = static_cast<int>(rss.str().length());
   MPI_Allreduce(&record_length, &max_record_length, 1, MPI_INT, MPI_MAX,
                 mpi_context.get_handle());
 
@@ -90,27 +121,10 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
   rss << std::string(
       static_cast<std::string::size_type>(max_record_length - record_length), ' ');
 
+  MPI_Datatype mpi_buffer;
   MPI_Type_contiguous(max_record_length, MPI_CHAR, &mpi_buffer);
   MPI_Type_commit(&mpi_buffer);
 
-  // Build the header on all ranks for now.
-  std::ostringstream hss;
-  hss << "--> AFFINITY MAP <--" << "\n\n"
-      << "Maximum number of (logical) cores: "
-      << max_cpus << "\n\n"
-      << "Thread binding map, key:" << "\n\n"
-      << "    . = No threads running on this core.\n"
-      << "    # = Multiple threads running on this core.\n"
-      << "  0-9 = Threads 0-9.\n"
-      << "  a-z = Threads 10-35.\n"
-      << "  A-Z = Threads 36-61.\n"
-      << "    ~ = Threads 62 and greater.\n\n"
-      << "MPI rank"
-      << " : ...THREADS..ON..CORES... : "
-      << "Num. cores available for migration." << "\n\n"
-      << std::string(11, ' ')
-      << "Cores ---->" << "\n";
-  std::string header = hss.str();
   MPI_Offset header_length = static_cast<MPI_Offset>(header.length());
 
   // Collective file open
@@ -125,7 +139,7 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
                       MPI_CHARACTER, MPI_STATUS_IGNORE);
   }
 
-  // Each rank writes its own record
+  // Each rank computes its own offset.
   MPI_Offset my_offset = header_length
                        + (static_cast<MPI_Offset>(mpi_context.get_rank())
                           * record_length);
@@ -133,11 +147,14 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
   // Create a view for each task which represents a unique, non-overlapping region.
   MPI_File_set_view(mapfile, my_offset, MPI_CHAR, mpi_buffer, "native", MPI_INFO_NULL);
 
+  // Each rank writes its own record.
   MPI_File_write(mapfile, rss.str().c_str(), max_record_length, MPI_CHAR, MPI_STATUS_IGNORE);
 
   // Close the file collectively.
   MPI_File_close(&mapfile);
   MPI_Type_free(&mpi_buffer);
+
+#endif // USE_VERNIER_MPI_STUB
 
 }
 

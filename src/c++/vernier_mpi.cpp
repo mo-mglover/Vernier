@@ -106,4 +106,14 @@ int MPI_Comm_rank([[maybe_unused]] MPI_Comm const comm, int *rank) {
   return MPI_SUCCESS;
 }
 
+/**
+ * @brief  Stub for MPI_Barrier
+ * @param [in]  comm  MPI communicator handle.
+ * @returns MPI success code.
+ */
+
+int MPI_Barrier([[maybe_unused]] MPI_Comm const comm) {
+  return MPI_SUCCESS;
+}
+
 #endif

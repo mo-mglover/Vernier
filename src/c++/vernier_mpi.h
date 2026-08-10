@@ -39,6 +39,7 @@ int MPI_Comm_dup([[maybe_unused]] MPI_Comm const comm,
 
 int MPI_Comm_size([[maybe_unused]] MPI_Comm const comm, int *size);
 int MPI_Comm_rank([[maybe_unused]] MPI_Comm const comm, int *rank);
+int MPI_Barrier([[maybe_unused]] MPI_Comm const comm);
 #endif
 
 #endif
