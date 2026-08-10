@@ -1,4 +1,13 @@
+/*----------------------------------------------------------------------------*\
+ (c) Crown copyright 2026 Met Office. All rights reserved.
+ The file LICENCE, distributed with this code, contains details of the terms
+ under which the code may be used.
+\*----------------------------------------------------------------------------*/
 
+/**
+ * @file   affinity.h
+ * @brief  Classes for affinity reporting and for associated system calls.
+ */
 
 #ifndef AFFINITY_H
 #define AFFINITY_H
@@ -23,7 +32,13 @@ namespace meto{
 // Forward declarations
 class AffinitySysCalls;
 
-// Affinity class itsel
+/**
+ * @brief  Affinity reporting class.
+ *
+ * Class providing methods to interrogate the system and report where threads
+ * are running.
+ */
+
 class Affinity{
 
   private:
@@ -38,11 +53,17 @@ class Affinity{
     explicit Affinity(std::unique_ptr<meto::AffinitySysCalls>);
 
     char hex(int);
-    void write_map(meto::MPIContext&, std::string const&);
+    void write_map(meto::MPIContext const&, std::string const&);
 
 };
 
-// System calls
+/**
+ * @brief  Affinity system call class.
+ *
+ * Base class to abstract away system calls for affinity reporting. This
+ * abstraction is useful for mocking and testing.
+ */
+
 class AffinitySysCalls{
 
   public:
@@ -54,6 +75,12 @@ class AffinitySysCalls{
     virtual int running_on_core()    const = 0;
 
 };
+
+/**
+ * @brief  Affinity system call class.
+ *
+ * Real (machine) implementation of the affinity system call base class. 
+ */
 
 class MachineAffinitySysCalls : public AffinitySysCalls{
 

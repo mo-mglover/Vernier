@@ -74,10 +74,11 @@ module vernier_mod
         !No arguments to handle
     end subroutine vernier_write
 
-    subroutine vernier_write_affinity_map() &
+    subroutine interface_vernier_write_affinity_map(fname) &
                bind(C, name='c_vernier_write_affinity_map')
-        !No arguments to handle
-    end subroutine vernier_write_affinity_map
+      import :: c_char
+      character(kind=c_char, len=1), optional, intent(in) :: fname(*)
+    end subroutine interface_vernier_write_affinity_map
 
     function vernier_get_total_walltime(hash_in, thread_id) result(walltime) &
              bind(C, name='c_vernier_get_total_walltime')
@@ -151,6 +152,33 @@ module vernier_mod
       call interface_vernier_start_part2(hash_out, local_region_name)
 
     end subroutine vernier_start
+
+    !> @brief  Write the affinity map.
+    !> @param [in] fname   Optional output file name.
+    !> @note   The filename need not be null terminated on entry to this
+    !>         routine.
+    subroutine vernier_write_affinity_map(fname)
+      implicit none
+
+      !Arguments
+      character(len=*), optional, intent(in) :: fname
+
+      !Local variables
+      character(len=:), allocatable :: local_fname
+
+      ! NB: Dual calls to interface_vernier_write_affinity_map() ought to be
+      ! unnecessary, since unallocated actual arguments passed to optional dummy
+      ! arguments count as not present in downstream code. We separate the calls
+      ! here (with and without local_fname) to accommodate a compiler bug. 
+      if (present(fname)) then
+        allocate(character(len=len_trim(fname)+1) :: local_fname)
+        call append_null_char(fname, local_fname, len_trim(fname))
+        call interface_vernier_write_affinity_map(local_fname)
+      else
+        call interface_vernier_write_affinity_map()
+      end if
+
+    end subroutine vernier_write_affinity_map
 
     !> @brief  Adds a null character to the end of a string.
     !> @param [in]  strlen      Length of the unterminated string.

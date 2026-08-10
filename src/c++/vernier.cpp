@@ -302,7 +302,7 @@ void meto::Vernier::write() {
  *
  */
 
- void meto::Vernier::write_affinity_map() {
+void meto::Vernier::write_affinity_map(std::string const& fname) {
 
    if (!initialized_) {
      meto::error_handler("Vernier::write_affinity_map. Vernier not initialised.",
@@ -310,7 +310,7 @@ void meto::Vernier::write() {
    }
 
    meto::Affinity affinity;
-   affinity.write_map(mpi_context_, "vernier-affinity-map.txt");
+   affinity.write_map(mpi_context_, fname);
  }
 
 /**

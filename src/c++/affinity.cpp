@@ -1,12 +1,11 @@
-/*------------------------------------------------------------------------------
- * C-language routines to report affinity information.
- *
- *------------------------------------------------------------------------------
- */
+/*----------------------------------------------------------------------------*\
+ (c) Crown copyright 2026 Met Office. All rights reserved.
+ The file LICENCE, distributed with this code, contains details of the terms
+ under which the code may be used.
+\*----------------------------------------------------------------------------*/
 
 #include <sched.h>
 #include <stdio.h>
-#include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <fstream>
@@ -21,30 +20,26 @@
 #include "affinity.h"
 #include "vernier_mpi.h"
 
-//
-// Constructors.
-//
+/**
+ * @brief Affinity constructor, defaulting to real (machine) system calls.
+ */
 
 meto::Affinity::Affinity()
   : system_calls_(std::make_unique<meto::MachineAffinitySysCalls>()) {}
 
+/**
+ * @brief Affinity constructor, using the provided system calls strategy object.
+ * @param [in] System calls strategy object. (Ownership acquired by constructor.)
+ */
+
 meto::Affinity::Affinity(std::unique_ptr<meto::AffinitySysCalls> system_calls)
   : system_calls_(std::move(system_calls)) {}
 
-/*-------------------------------------------------------------------------------
-* SYNOPSIS
-*   call write_map(funit, comm_size, my_rank, writer_rank)
-*
-* DESCRIPTION
-*   Writes affinitisation in ASCII-art form.
-*
-* ARGUMENTS
-*   funit       -- The file unit to write to.
-*   comm_size   -- The number of ranks in the MPI communicator.
-*   rank        -- The rank of this particular MPI task.
-*   writer_rank -- The rank of the MPI task doing the writing.
-*-------------------------------------------------------------------------------
-*/
+/**
+ * @brief Writes affinitisation map in ASCII-art form.
+ * @param [in] mpi_context  Vernier MPI context object.
+ * @param [in] fname        Writes file of this name.
+ */
 
 void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string const& fname)
 {
@@ -104,9 +99,15 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
       << "Maximum number of (logical) cores: "
       << max_cpus << "\n\n"
       << "Thread binding map, key:" << "\n\n"
+      << "    . = No threads running on this core.\n"
+      << "    # = Multiple threads running on this core.\n"
+      << "  0-9 = Threads 0-9.\n"
+      << "  a-z = Threads 10-35.\n"
+      << "  A-Z = Threads 36-61.\n"
+      << "    ~ = Threads 62 and greater.\n\n"
       << "MPI rank"
       << " : ...THREADS..ON..CORES... : "
-      << "Num. cores available to threads" << "\n\n"
+      << "Num. cores available for migration." << "\n\n"
       << std::string(11, ' ')
       << "Cores ---->" << "\n";
   std::string header = hss.str();
@@ -140,15 +141,14 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
 
 }
 
-/*-------------------------------------------------------------------------------
-* SYNOPSIS
-*   hex(num)
-*
-* DESCRIPTION
-*   Generates the single-digit thread ID.
-*
-*-------------------------------------------------------------------------------
-*/
+/**
+ * @brief Produces a single character indicating the thread number.
+ *
+ * @details Only the first 62 threads are representable, given the constraint of
+ *          numerical digits, lower case letters and uppercase letters. That
+ *          should be enough to determine whether affinitisation is working as
+ *          expected. Threads with IDs higher than 62 appear as a tilde.
+ */
 
 char meto::Affinity::hex(int num)
 {
@@ -164,14 +164,11 @@ char meto::Affinity::hex(int num)
 
 }
 
-/*------------------------------------------------------------------------------
-* SYNOPSIS
-*   int max_available_cpus_C()
-*
-* DESCRIPTION
-*   Returns the maximum number of cores (real and virtual) available on a node.
-*-------------------------------------------------------------------------------
-*/
+/**
+ * @brief  Returns the maximum number of logical cores (real and virtual)
+ *         available on a node.
+ * @returns  See brief.
+ */
 
 int meto::MachineAffinitySysCalls::max_available_cpus() const
 {
@@ -180,16 +177,12 @@ int meto::MachineAffinitySysCalls::max_available_cpus() const
   return max_cpus;
 }
 
-/*------------------------------------------------------------------------------
-* SYNOPSIS
-*   int num_available_cpus()
-*
-* DESCRIPTION
-*   Returns the number of cores (real and virtual) on which this thread may run.
-*   This number will be unity if a thread is bound to run on a single (logical)
-*   core.
-*-------------------------------------------------------------------------------
-*/
+/**
+ * @brief  Returns the number of cores (real and virtual) which this thread
+ *         may migrate across.
+ * @notes  This number will be unity if a thread is bound to a single (logical)
+ *         core.
+ */
 
 int meto::MachineAffinitySysCalls::num_available_cpus() const
 {
@@ -209,14 +202,10 @@ int meto::MachineAffinitySysCalls::num_available_cpus() const
   }
 }
 
-/*------------------------------------------------------------------------------
-* SYNOPSIS
-*   int cpumask_weight()
-*
-* DESCRIPTION
-*   Returns the number of elements of the cpumask that are set.
-*-------------------------------------------------------------------------------
-*/
+/**
+ * @brief    Count the number of elements of a cpumask that are set.
+ * @returns  The number of mask elements set.
+ */
 
 int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t* cpumask) const
 {
@@ -231,14 +220,12 @@ int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t* cpumask) const
   return weight;
 }
 
-/*------------------------------------------------------------------------------
-* SYNOPSIS
-*   int running_on_core()
-*
-* DESCRIPTION
-*   Returns the ID of the core on which the calling task/thread is running.
-*-------------------------------------------------------------------------------
-*/
+/**
+ * @brief   Returns the core ID on which the calling thread is running at the
+ *          point this method is called.
+ * @notes   The layout of core IDs will be system-dependent.
+ * @returns The core ID.
+ */
 
 int meto::MachineAffinitySysCalls::running_on_core() const
 {
