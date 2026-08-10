@@ -16,18 +16,18 @@
 #define _GNU_SOURCE
 #endif
 
-#include <sched.h>
 #include <memory>
+#include <sched.h>
 #include <string>
 #ifdef _OPENMP
-  #include <omp.h>
+#include <omp.h>
 #endif
 
 #include "mpi_context.h"
 
 #define VERNIER_HIGH_NUM_CPUS_VALUE 9999u
 
-namespace meto{
+namespace meto {
 
 // Forward declarations
 class AffinitySysCalls;
@@ -39,22 +39,19 @@ class AffinitySysCalls;
  * are running.
  */
 
-class Affinity{
+class Affinity {
 
-  private:
+private:
+  // Data members
+  std::unique_ptr<AffinitySysCalls> system_calls_;
 
-    // Data members
-    std::unique_ptr<AffinitySysCalls> system_calls_;
+public:
+  // Constructors
+  Affinity();
+  explicit Affinity(std::unique_ptr<meto::AffinitySysCalls>);
 
-  public:
-
-    // Constructors
-    Affinity();
-    explicit Affinity(std::unique_ptr<meto::AffinitySysCalls>);
-
-    char thread_id_to_char(int);
-    void write_map(meto::MPIContext const&, std::string const&);
-
+  char thread_id_to_char(int);
+  void write_map(meto::MPIContext const &, std::string const &);
 };
 
 /**
@@ -64,39 +61,33 @@ class Affinity{
  * abstraction is useful for mocking and testing.
  */
 
-class AffinitySysCalls{
+class AffinitySysCalls {
 
-  public:
+public:
+  virtual ~AffinitySysCalls() = default;
 
-    virtual ~AffinitySysCalls() = default;
-
-    virtual int max_available_cpus() const = 0;
-    virtual int num_available_cpus() const = 0;
-    virtual int running_on_core()    const = 0;
-
+  virtual int max_available_cpus() const = 0;
+  virtual int num_available_cpus() const = 0;
+  virtual int running_on_core() const = 0;
 };
 
 /**
  * @brief  Affinity system call class.
  *
- * Real (machine) implementation of the affinity system call base class. 
+ * Real (machine) implementation of the affinity system call base class.
  */
 
-class MachineAffinitySysCalls : public AffinitySysCalls{
+class MachineAffinitySysCalls : public AffinitySysCalls {
 
-  private:
+private:
+  int cpumask_weight(cpu_set_t *) const;
 
-    int cpumask_weight(cpu_set_t*) const;
-
-  public:
-
-    int max_available_cpus() const override;
-    int num_available_cpus() const override;
-    int running_on_core()    const override;
-
+public:
+  int max_available_cpus() const override;
+  int num_available_cpus() const override;
+  int running_on_core() const override;
 };
 
 } // namespace meto
 
 #endif
-

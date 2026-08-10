@@ -111,9 +111,8 @@ void meto::MPIContext::finalize() {
 void meto::MPIContext::barrier() {
   int ierr = MPI_Barrier(comm_handle_);
   if (ierr != MPI_SUCCESS) {
-    meto::error_handler(
-        "MPIContext::barrier. Synchronisation failed.",
-        EXIT_FAILURE);
+    meto::error_handler("MPIContext::barrier. Synchronisation failed.",
+                        EXIT_FAILURE);
   }
 }
 
@@ -151,4 +150,3 @@ std::string meto::MPIContext::get_tag() const { return tag_; }
  */
 
 bool meto::MPIContext::on_root() const { return comm_rank_ == comm_root_; }
-

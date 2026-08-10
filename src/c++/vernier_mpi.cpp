@@ -112,8 +112,6 @@ int MPI_Comm_rank([[maybe_unused]] MPI_Comm const comm, int *rank) {
  * @returns MPI success code.
  */
 
-int MPI_Barrier([[maybe_unused]] MPI_Comm const comm) {
-  return MPI_SUCCESS;
-}
+int MPI_Barrier([[maybe_unused]] MPI_Comm const comm) { return MPI_SUCCESS; }
 
 #endif

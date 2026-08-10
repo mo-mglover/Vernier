@@ -4,17 +4,17 @@
  under which the code may be used.
 \*----------------------------------------------------------------------------*/
 
-#include <sched.h>
-#include <stdio.h>
-#include <iomanip>
-#include <sstream>
 #include <fstream>
+#include <iomanip>
 #include <memory>
+#include <sched.h>
+#include <sstream>
+#include <stdio.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
 #ifdef _OPENMP
-  #include <omp.h>
+#include <omp.h>
 #endif
 
 #include "affinity.h"
@@ -25,15 +25,16 @@
  */
 
 meto::Affinity::Affinity()
-  : system_calls_(std::make_unique<meto::MachineAffinitySysCalls>()) {}
+    : system_calls_(std::make_unique<meto::MachineAffinitySysCalls>()) {}
 
 /**
  * @brief Affinity constructor, using the provided system calls strategy object.
- * @param [in] System calls strategy object. (Ownership acquired by constructor.)
+ * @param [in] System calls strategy object. (Ownership acquired by
+ * constructor.)
  */
 
 meto::Affinity::Affinity(std::unique_ptr<meto::AffinitySysCalls> system_calls)
-  : system_calls_(std::move(system_calls)) {}
+    : system_calls_(std::move(system_calls)) {}
 
 /**
  * @brief Writes affinitisation map in ASCII-art form.
@@ -41,17 +42,17 @@ meto::Affinity::Affinity(std::unique_ptr<meto::AffinitySysCalls> system_calls)
  * @param [in] fname        Writes file of this name.
  */
 
-void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string const& fname)
-{
+void meto::Affinity::write_map(meto::MPIContext const &mpi_context,
+                               std::string const &fname) {
 
   // Maximum number of logical cores on a node.
-  std::size_t max_cpus = static_cast<std::size_t>(system_calls_->max_available_cpus());
+  std::size_t max_cpus =
+      static_cast<std::size_t>(system_calls_->max_available_cpus());
 
   // Build the header on all ranks for now.
   std::ostringstream hss;
   hss << "--> AFFINITY MAP <--" << "\n\n"
-      << "Maximum number of (logical) cores: "
-      << max_cpus << "\n\n"
+      << "Maximum number of (logical) cores: " << max_cpus << "\n\n"
       << "Thread binding map, key:" << "\n\n"
       << "    . = No threads running on this core.\n"
       << "    # = Multiple threads running on this core.\n"
@@ -62,38 +63,39 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
       << "MPI rank"
       << " : ...THREADS..ON..CORES... : "
       << "Num. cores available for migration." << "\n\n"
-      << std::string(11, ' ')
-      << "Cores ---->" << "\n";
+      << std::string(11, ' ') << "Cores ---->" << "\n";
   std::string header = hss.str();
 
   // Construct the mask for each rank.
   std::string mask(max_cpus, '.');
-  #pragma omp parallel default(none) shared(mask)
+#pragma omp parallel default(none) shared(mask)
+  {
+
+    int thread_id = 0;
+#ifdef _OPENMP
+    thread_id = omp_get_thread_num();
+#endif
+
+    auto core_id = static_cast<std::size_t>(system_calls_->running_on_core());
+    char thread_id_char = thread_id_to_char(thread_id);
+
+// If more than one thread is running on the same core, show that with a
+// hash symbol.
+#pragma omp critical
     {
-
-      int thread_id=0;
-      #ifdef _OPENMP
-        thread_id = omp_get_thread_num();
-      #endif
-
-      auto core_id = static_cast<std::size_t>(system_calls_->running_on_core());
-      char thread_id_char = thread_id_to_char(thread_id);
-
-      // If more than one thread is running on the same core, show that with a
-      // hash symbol.
-      #pragma omp critical
-        {
-          if (mask.at(core_id) == '.'){mask.at(core_id) = thread_id_char;}
-          else                        {mask.at(core_id) = '#';}
-        } // critical
-    } // parallel
+      if (mask.at(core_id) == '.') {
+        mask.at(core_id) = thread_id_char;
+      } else {
+        mask.at(core_id) = '#';
+      }
+    } // critical
+  } // parallel
 
   // Construct the record on each individual rank.
   int num_cpus = system_calls_->num_available_cpus();
   std::ostringstream rss;
   rss << std::setw(8) << std::setfill('0') << mpi_context.get_rank() << " : "
-      << mask << " : "
-      << std::setw(3) << std::setfill(' ') << num_cpus << "\n";
+      << mask << " : " << std::setw(3) << std::setfill(' ') << num_cpus << "\n";
 
 #ifdef USE_VERNIER_MPI_STUB
 
@@ -119,7 +121,8 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
   // Having found the maximum record length, pad out the record on each
   // individual MPI rank with spaces.
   rss << std::string(
-      static_cast<std::string::size_type>(max_record_length - record_length), ' ');
+      static_cast<std::string::size_type>(max_record_length - record_length),
+      ' ');
 
   MPI_Datatype mpi_buffer;
   MPI_Type_contiguous(max_record_length, MPI_CHAR, &mpi_buffer);
@@ -134,28 +137,30 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
 
   // Root writes the header at offset 0
   if (mpi_context.on_root()) {
-    MPI_File_write_at(mapfile, 0,
-                      header.data(), static_cast<int>(header.size()),
-                      MPI_CHARACTER, MPI_STATUS_IGNORE);
+    MPI_File_write_at(mapfile, 0, header.data(),
+                      static_cast<int>(header.size()), MPI_CHARACTER,
+                      MPI_STATUS_IGNORE);
   }
 
   // Each rank computes its own offset.
-  MPI_Offset my_offset = header_length
-                       + (static_cast<MPI_Offset>(mpi_context.get_rank())
-                          * record_length);
+  MPI_Offset my_offset =
+      header_length +
+      (static_cast<MPI_Offset>(mpi_context.get_rank()) * record_length);
 
-  // Create a view for each task which represents a unique, non-overlapping region.
-  MPI_File_set_view(mapfile, my_offset, MPI_CHAR, mpi_buffer, "native", MPI_INFO_NULL);
+  // Create a view for each task which represents a unique, non-overlapping
+  // region.
+  MPI_File_set_view(mapfile, my_offset, MPI_CHAR, mpi_buffer, "native",
+                    MPI_INFO_NULL);
 
   // Each rank writes its own record.
-  MPI_File_write(mapfile, rss.str().c_str(), max_record_length, MPI_CHAR, MPI_STATUS_IGNORE);
+  MPI_File_write(mapfile, rss.str().c_str(), max_record_length, MPI_CHAR,
+                 MPI_STATUS_IGNORE);
 
   // Close the file collectively.
   MPI_File_close(&mapfile);
   MPI_Type_free(&mpi_buffer);
 
 #endif // USE_VERNIER_MPI_STUB
-
 }
 
 /**
@@ -167,18 +172,24 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
  *          expected. Threads with IDs higher than 62 appear as a tilde.
  */
 
-char meto::Affinity::thread_id_to_char(int num)
-{
+char meto::Affinity::thread_id_to_char(int num) {
 
   char thread_id_char;
 
-  if      (num < 10) {thread_id_char = static_cast<char>('0' + num);}        //  10 numerical digits
-  else if (num < 36) {thread_id_char = static_cast<char>('a' + (num-10));}   // +26 lowercase letters
-  else if (num < 62) {thread_id_char = static_cast<char>('A' + (num-36));}   // +26 uppercase letters
-  else               {thread_id_char = '~';}
+  if (num < 10) {
+    thread_id_char = static_cast<char>('0' + num);
+  } //  10 numerical digits
+  else if (num < 36) {
+    thread_id_char = static_cast<char>('a' + (num - 10));
+  } // +26 lowercase letters
+  else if (num < 62) {
+    thread_id_char = static_cast<char>('A' + (num - 36));
+  } // +26 uppercase letters
+  else {
+    thread_id_char = '~';
+  }
 
   return thread_id_char;
-
 }
 
 /**
@@ -187,9 +198,8 @@ char meto::Affinity::thread_id_to_char(int num)
  * @returns  See brief.
  */
 
-int meto::MachineAffinitySysCalls::max_available_cpus() const
-{
-  int max_cpus=VERNIER_HIGH_NUM_CPUS_VALUE;
+int meto::MachineAffinitySysCalls::max_available_cpus() const {
+  int max_cpus = VERNIER_HIGH_NUM_CPUS_VALUE;
   max_cpus = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
   return max_cpus;
 }
@@ -201,8 +211,7 @@ int meto::MachineAffinitySysCalls::max_available_cpus() const
  *         core.
  */
 
-int meto::MachineAffinitySysCalls::num_available_cpus() const
-{
+int meto::MachineAffinitySysCalls::num_available_cpus() const {
   {
     int num_cpus;
     cpu_set_t cpumask;
@@ -224,14 +233,15 @@ int meto::MachineAffinitySysCalls::num_available_cpus() const
  * @returns  The number of mask elements set.
  */
 
-int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t* cpumask) const
-{
+int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t *cpumask) const {
   int weight;
   int index;
 
-  weight=0;
-  for (index=0; index < CPU_SETSIZE; ++index){
-    if (CPU_ISSET( static_cast<size_t>(index), cpumask)){weight++;}
+  weight = 0;
+  for (index = 0; index < CPU_SETSIZE; ++index) {
+    if (CPU_ISSET(static_cast<size_t>(index), cpumask)) {
+      weight++;
+    }
   }
 
   return weight;
@@ -244,9 +254,8 @@ int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t* cpumask) const
  * @returns The core ID.
  */
 
-int meto::MachineAffinitySysCalls::running_on_core() const
-{
-  int core=VERNIER_HIGH_NUM_CPUS_VALUE;
+int meto::MachineAffinitySysCalls::running_on_core() const {
+  int core = VERNIER_HIGH_NUM_CPUS_VALUE;
   core = sched_getcpu();
   return core;
 }

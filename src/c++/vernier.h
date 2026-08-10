@@ -108,7 +108,8 @@ public:
   size_t start(std::string_view const);
   void stop(size_t const);
   void write();
-  void write_affinity_map(std::string const& fname = "vernier-affinity-map.txt");
+  void
+  write_affinity_map(std::string const &fname = "vernier-affinity-map.txt");
 
   // Getters
   double get_total_walltime(size_t const, int const);
