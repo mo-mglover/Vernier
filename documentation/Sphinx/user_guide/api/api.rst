@@ -7,10 +7,13 @@
 API
 ---
 
-Vernier's API consists of five primary functions; ``init``, ``start``, ``stop``
-``finalise``, and ``write``. These functions are used to manage the profiling.
-A timed region is defined by a start-stop pair which return and take a hash
-respectively.
+Vernier's profiling API consists of five primary functions; ``init``, ``start``,
+``stop`` ``finalise``, and ``write``. A timed region is defined by a start-stop
+pair which return and take a hash respectively.
+
+Vernier further provides functionality to write ASCII-art affinity maps, showing
+which cores ranks/threads are running on. This is useful to establish whether
+the expected affinitisation pattern matches that seen in practice.
 
 How calls to these functions are made differs slightly between C++ and Fortran,
 but the core functionality is the same.
@@ -86,6 +89,11 @@ follows:
 
        Returns the number of calliper pairs called on the specified thread.
 
+   .. cpp:function:: void write_affinity_map(fname)
+
+       Writes affinity map to file ``fname``. The filename argument is optional,
+       and defaults to ``vernier-affinity-map.txt``
+
 The library can be linked to an application with the ``-lvernier`` flag.
 
 CMake Support
@@ -131,6 +139,11 @@ subroutines contained in the ``vernier_mod`` Fortran module are:
 
    Finalises the Vernier profiler, ensuring all data is written and resources
    are cleaned up. This function should be called at the end of the program.
+
+.. function:: vernier_write_affinity_map(fname)
+
+   Writes affinity map to file ``fname``. The filename argument is optional, and
+   defaults to ``vernier-affinity-map.txt``
 
 The library can be linked to an application with the ``-lvernier
 -lvernier_c -lvernier_f`` flags.
