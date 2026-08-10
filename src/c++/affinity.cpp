@@ -60,8 +60,7 @@ void meto::Affinity::write_map(meto::MPIContext const &mpi_context,
       << "  a-z = Threads 10-35.\n"
       << "  A-Z = Threads 36-61.\n"
       << "    ~ = Threads 62 and greater.\n\n"
-      << "MPI rank"
-      << " : ...THREADS..ON..CORES... : "
+      << "MPI rank : ...THREADS..ON..CORES... : "
       << "Num. cores available for migration." << "\n\n"
       << std::string(11, ' ') << "Cores ---->" << "\n";
   std::string header = hss.str();

@@ -108,15 +108,13 @@ void c_vernier_write() { meto::vernier.write(); }
  * @param[in] Name of the file to write.
  */
 
-void c_vernier_write_affinity_map(const char* const fname) {
+void c_vernier_write_affinity_map(const char *const fname) {
 
   if (fname) {
     meto::vernier.write_affinity_map(std::string(fname));
-  }
-  else {
+  } else {
     meto::vernier.write_affinity_map();
   }
-
 }
 
 /**
