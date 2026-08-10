@@ -60,7 +60,7 @@ void meto::Affinity::write_map(meto::MPIContext const& mpi_context, std::string 
         thread_id = omp_get_thread_num();
       #endif
 
-      int core_id = system_calls_->running_on_core();
+      auto core_id = static_cast<std::size_t>(system_calls_->running_on_core());
       char thread_id_char = thread_id_to_char(thread_id);
 
       // If more than one thread is running on the same core, show that with a
