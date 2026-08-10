@@ -100,12 +100,12 @@ TEST(AffinityTest, TwoThreadsAlternateCores) {
   // file.
   mpi_context.barrier();
   if (mpi_context.on_root()) {
-    int const expected_hashes_per_line = (get_max_threads()+1)/2;
+    int const expected_hashes_per_line = get_max_threads()/2;
     check_characters(
       fname,
       {
         {'#', expected_hashes_per_line},
-        {'.', max_available_cpus - expected_hashes_per_line}
+        {'.', max_available_cpus - expected_hashes_per_line - get_max_threads()%2}
       }
     );
     // Remove the file to allow a clean re-test.
