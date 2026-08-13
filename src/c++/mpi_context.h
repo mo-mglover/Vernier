@@ -50,7 +50,7 @@ public:
 
   // Init and finalize
   bool is_initialized();
-  void init(MPI_Comm, std::string_view tag);
+  void init(MPI_Comm, std::string_view tag = MPI_CONTEXT_NULL_STRING);
   void finalize();
   void barrier();
   void reset();

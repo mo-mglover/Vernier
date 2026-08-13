@@ -23,7 +23,8 @@ module test_vernier_mod
     procedure :: test_vernier_timings
     procedure :: test_vernier_tags
     procedure :: test_vernier_affinity
-    procedure :: test_vernier_affinity_default
+    procedure :: test_vernier_affinity_with_comm
+    procedure :: test_vernier_affinity_default_fname
   end type test_vernier_type
 
 contains
@@ -150,9 +151,8 @@ contains
   end subroutine test_vernier_tags
 
   !------------------------------------------------------------------------------
-  ! Test Vernier affinity - specific filename
-  !
-  ! Checks that a file with the specified name is created.
+  ! Test Vernier affinity, using the MPI communicator with which Vernier was
+  ! initialised.
   !------------------------------------------------------------------------------
 
   @test(npes=[1,2])
@@ -161,9 +161,7 @@ contains
 
     class(test_vernier_type), intent(inout) :: this
 
-    character(len=40) :: filename
-    logical :: file_exists
-    integer :: comm_rank
+    character(len=20) :: tag
     integer :: comm_size
     integer :: ierr
 
@@ -172,28 +170,58 @@ contains
     ! Generate the filename to write. Vernier does not expose MPI contexts,
     ! so get the communicator size with direct MPI call.
     call mpi_comm_size(this%getMpiCommunicator(), comm_size, ierr)
-    write(filename, '(a,i0,a)') "vernier-affinity-comm-size", comm_size, ".txt" 
+    write(tag, '(a,i0)') "comm-size", comm_size
 
     ! Write affinity map.
-    call vernier_write_affinity_map(trim(filename))
+    call vernier_write_affinity(tag = trim(tag))
 
-    call check_and_delete_file(this%getMpiCommunicator(), trim(filename))
+    call check_and_delete_file(this%getMpiCommunicator(), &
+                              "vernier-affinity-"//trim(tag)//".txt")
 
     call vernier_finalize()
 
   end subroutine test_vernier_affinity
 
   !------------------------------------------------------------------------------
-  ! Test Vernier affinity - default filename
-  !
-  ! Checks that an affinity map file with the default filename is created.
-  !
-  ! Only test with one communicator size to avoid race condition on writing a
-  ! file of the default name.
+  ! Test Vernier affinity with ranks in the specified MPI communicator.
+  !------------------------------------------------------------------------------
+
+  @test(npes=[1,2])
+  subroutine test_vernier_affinity_with_comm(this)
+    implicit none
+
+    class(test_vernier_type), intent(inout) :: this
+
+    character(len=20) :: tag
+    integer :: comm_size
+    integer :: ierr
+
+    call vernier_init(client_comm_handle = this%getMpiCommunicator())
+
+    ! Generate the filename to write. Vernier does not expose MPI contexts,
+    ! so get the communicator size with direct MPI call.
+    call mpi_comm_size(this%getMpiCommunicator(), comm_size, ierr)
+    write(tag, '(a,i0)') "with-comm-size", comm_size
+
+    ! Write affinity map.
+    call vernier_write_affinity_with_comm(      &
+       comm_handle = this%getMpiCommunicator(), &
+       tag = trim(tag))
+
+    call check_and_delete_file(this%getMpiCommunicator(), &
+                              "vernier-affinity-"//trim(tag)//".txt")
+
+    call vernier_finalize()
+
+  end subroutine test_vernier_affinity_with_comm
+
+  !------------------------------------------------------------------------------
+  ! Test Vernier affinity with no tag (default filename.)
+  ! Run on a single MPI rank only to avoid race conditions between ranks.
   !------------------------------------------------------------------------------
 
   @test(npes=[1])
-  subroutine test_vernier_affinity_default(this)
+  subroutine test_vernier_affinity_default_fname(this)
     implicit none
 
     class(test_vernier_type), intent(inout) :: this
@@ -201,16 +229,15 @@ contains
     call vernier_init(client_comm_handle = this%getMpiCommunicator())
 
     ! Write affinity map.
-    call vernier_write_affinity_map()
+    call vernier_write_affinity()
 
     ! Check file exists with default filename.
-    call check_and_delete_file(      &
-        this%getMPICommunicator(),   &
-       'vernier-affinity-map.txt')
+    call check_and_delete_file(this%getMpiCommunicator(), &
+                               "vernier-affinity.txt")
 
     call vernier_finalize()
 
-  end subroutine test_vernier_affinity_default
+  end subroutine test_vernier_affinity_default_fname
 
   !-------------------------------------------------------------------------------
   ! Helper routine to check if file exists, then delete if it does. Deleting

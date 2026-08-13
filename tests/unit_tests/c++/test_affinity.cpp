@@ -123,7 +123,7 @@ TEST(AffinityTest, TestSequence) {
 
   // Expected sequence.
   std::string const sequence =
-      "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~~";
+      "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$$";
 
   // Generate the output sequence.
   int index = 0;

@@ -59,7 +59,7 @@ void meto::Affinity::write_map(meto::MPIContext const &mpi_context,
       << "  0-9 = Threads 0-9.\n"
       << "  a-z = Threads 10-35.\n"
       << "  A-Z = Threads 36-61.\n"
-      << "    ~ = Threads 62 and greater.\n\n"
+      << "    $ = Threads 62 and greater.\n\n"
       << "MPI rank : ...THREADS..ON..CORES... : "
       << "Num. cores available for migration." << "\n\n"
       << std::string(11, ' ') << "Cores ---->" << "\n";
@@ -185,7 +185,7 @@ char meto::Affinity::thread_id_to_char(int num) {
     thread_id_char = static_cast<char>('A' + (num - 36));
   } // +26 uppercase letters
   else {
-    thread_id_char = '~';
+    thread_id_char = '$';
   }
 
   return thread_id_char;

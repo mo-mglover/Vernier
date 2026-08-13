@@ -92,7 +92,7 @@ follows:
    .. cpp:function:: void write_affinity_map(fname)
 
        Writes affinity map to file ``fname``. The filename argument is optional,
-       and defaults to ``vernier-affinity-map.txt``
+       and defaults to ``vernier-affinity.txt``
 
 The library can be linked to an application with the ``-lvernier`` flag.
 
@@ -143,7 +143,7 @@ subroutines contained in the ``vernier_mod`` Fortran module are:
 .. function:: vernier_write_affinity_map(fname)
 
    Writes affinity map to file ``fname``. The filename argument is optional, and
-   defaults to ``vernier-affinity-map.txt``
+   defaults to ``vernier-affinity.txt``
 
 The library can be linked to an application with the ``-lvernier
 -lvernier_c -lvernier_f`` flags.
