@@ -217,7 +217,8 @@ contains
 
   !------------------------------------------------------------------------------
   ! Test Vernier affinity with no tag (default filename.)
-  ! Run on a single MPI rank only to avoid race conditions between ranks.
+  ! Run on a single MPI rank only to avoid race conditions between tests with
+  ! different comm sizes.
   !------------------------------------------------------------------------------
 
   @test(npes=[1])
@@ -260,9 +261,6 @@ contains
     logical :: on_root
     integer :: my_rank
     integer :: ierr
-
-    ! Synchronise - file must have been created.
-    call mpi_barrier(comm, ierr)
 
     ! Establish whether this is the rank designated as root.
     call mpi_comm_rank(comm, my_rank, ierr)

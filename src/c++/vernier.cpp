@@ -314,6 +314,7 @@ void meto::Vernier::write_affinity(std::string_view const tag) {
  *         specified MPI communicator.
  * @param [in] comm_handle MPI communicator over which to report affinitisation.
  * @param [in] tag  Optional string to include in the output filename.
+ * @warning  All ranks in the communicator provided must call this routine.
  */
 
 void meto::Vernier::write_affinity_with_comm(MPI_Comm const comm_handle,

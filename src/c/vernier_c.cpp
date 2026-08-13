@@ -127,6 +127,7 @@ void c_vernier_write_affinity(const char *const tag) {
  *        communicator.
  * @param[in] client_comm_handle  MPI communicator handle.
  * @param[in] tag  Optional string to include in the filename.
+ * @warning  All ranks in the communicator provided must call this routine.
  */
 
 void c_vernier_write_affinity_with_comm(

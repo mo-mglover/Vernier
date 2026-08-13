@@ -62,7 +62,6 @@ TEST(AffinityTest, OneThreadPerCore) {
 
   // Check that the number of hashes and dots are as expected, as written to the
   // file.
-  mpi_context.barrier();
   if (mpi_context.on_root()) {
     int constexpr expected_hashes_per_line = 0;
     check_characters(fname, {{'#', expected_hashes_per_line},
@@ -93,7 +92,6 @@ TEST(AffinityTest, TwoThreadsAlternateCores) {
 
   // Check that the number of hashes and dots are as expected, as written to the
   // file.
-  mpi_context.barrier();
   if (mpi_context.on_root()) {
     int const expected_hashes_per_line = get_max_threads() / 2;
     check_characters(fname,

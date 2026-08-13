@@ -161,7 +161,7 @@ module vernier_mod
     end subroutine vernier_start
 
     !> @brief  Write the affinity map, involving those MPI ranks comprising the
-    !>         communicator with which Vernier was initialised. 
+    !>         communicator with which Vernier was initialised.
     !> @param [in] tag Optional tag to appear in the Vernier output filename.
     !> @note   The tag need not be null terminated on entry to this routine.
     subroutine vernier_write_affinity(tag)
@@ -176,7 +176,7 @@ module vernier_mod
       ! NB: Dual calls to interface_vernier_write_affinity() ought to be
       ! unnecessary, since unallocated actual arguments passed to optional dummy
       ! arguments count as not present in downstream code. We separate the calls
-      ! here (with and without local_tag) to accommodate a compiler bug. 
+      ! here (with and without local_tag) to accommodate a compiler bug.
       if (present(tag)) then
         allocate(character(len=len_trim(tag)+1) :: local_tag)
         call append_null_char(tag, local_tag, len_trim(tag))
@@ -193,6 +193,7 @@ module vernier_mod
     !>                          handle.
     !> @param [in] tag Optional tag to appear in the Vernier output filename.
     !> @note   The tag need not be null terminated on entry to this routine.
+    !> @warning  All ranks in the communicator provided must call this routine.
     subroutine vernier_write_affinity_with_comm(comm_handle, tag)
       implicit none
 
@@ -206,7 +207,7 @@ module vernier_mod
       ! NB: Dual calls to interface_vernier_write_affinity() ought to be
       ! unnecessary, since unallocated actual arguments passed to optional dummy
       ! arguments count as not present in downstream code. We separate the calls
-      ! here (with and without local_tag) to accommodate a compiler bug. 
+      ! here (with and without local_tag) to accommodate a compiler bug.
       if (present(tag)) then
         allocate(character(len=len_trim(tag)+1) :: local_tag)
         call append_null_char(tag, local_tag, len_trim(tag))
