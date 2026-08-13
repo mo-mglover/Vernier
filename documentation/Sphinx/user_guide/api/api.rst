@@ -97,12 +97,12 @@ follows:
        
    .. cpp:function:: void write_affinity_with_comm(comm_handle, tag)
 
-       Writes affinity map to a file, involving all ranks in the specified
-       communicator. Example use-case: Vernier is initialised with a
-       sub-communicator, but all ranks in the global communicator are wanted on
-       the same map. Note that this must be called on all ranks in the specified
-       communicator. The tag argument optional and, if present, will be appended
-       to the filename. The output filename defaults to ``vernier-affinity.txt``.
+      Writes affinity map to a file, involving all ranks in the specified
+      communicator. Example use-case: Vernier is initialised with a
+      sub-communicator, but all ranks in the global communicator are wanted on
+      the same map. Note that this must be called on all ranks in the specified
+      communicator. The tag argument optional and, if present, will be appended
+      to the filename. The output filename defaults to ``vernier-affinity.txt``.
 
 The library can be linked to an application with the ``-lvernier`` flag.
 
@@ -152,18 +152,18 @@ subroutines contained in the ``vernier_mod`` Fortran module are:
 
 .. function:: vernier_write_affinity(tag)
 
-    Writes affinity map to a file. The tag argument is optional and, if present,
-    will be appended to the filename. The output filename defaults to
-    ``vernier-affinity.txt``.
+   Writes affinity map to a file. The tag argument is optional and, if present,
+   will be appended to the filename. The output filename defaults to
+   ``vernier-affinity.txt``.
 
 .. function:: vernier_write_affinity_with_comm(comm_handle, tag)
 
-     Writes affinity map to a file, involving all ranks in the specified
-     communicator. Example use-case: Vernier is initialised with a
-     sub-communicator, but all ranks in the global communicator are wanted on
-     the same map. Note that this must be called on all ranks in the specified
-     communicator. The tag argument optional and, if present, will be appended
-     to the filename. The output filename defaults to ``vernier-affinity.txt``.
+   Writes affinity map to a file, involving all ranks in the specified
+   communicator. Example use-case: Vernier is initialised with a
+   sub-communicator, but all ranks in the global communicator are wanted on the
+   same map. Note that this must be called on all ranks in the specified
+   communicator. The tag argument optional and, if present, will be appended to
+   the filename. The output filename defaults to ``vernier-affinity.txt``.
 
 The library can be linked to an application with the ``-lvernier
 -lvernier_c -lvernier_f`` flags.

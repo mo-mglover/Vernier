@@ -137,14 +137,13 @@ TEST(DeathTest, InvalidIOModeTest) {
       ExitedWithCode(EXIT_FAILURE), "Invalid IO mode choice");
 }
 
-
 // Check that the Vernier affinity functionality produces files with expected
 // filenames.
 TEST(VernierTest, WriteAffinity) {
 
   meto::vernier.init(MPI_COMM_WORLD);
 
-  std::string const seedname  = "vernier-affinity";
+  std::string const seedname = "vernier-affinity";
   std::string const extension = ".txt";
   std::string fname;
 
@@ -178,10 +177,8 @@ void check_file_exists_and_remove(std::string const fname) {
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-  if (myrank == 0){
+  if (myrank == 0) {
     EXPECT_TRUE(std::filesystem::exists(fname));
     EXPECT_TRUE(std::filesystem::remove(fname));
   }
-
 }
-
