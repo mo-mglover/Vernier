@@ -25,8 +25,6 @@
 
 #include "mpi_context.h"
 
-#define VERNIER_HIGH_NUM_CPUS_VALUE 9999u
-
 namespace meto {
 
 // Forward declarations

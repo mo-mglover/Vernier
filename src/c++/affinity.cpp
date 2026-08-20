@@ -18,6 +18,7 @@
 #endif
 
 #include "affinity.h"
+#include "error_handler.h"
 #include "vernier_mpi.h"
 
 /**
@@ -67,16 +68,22 @@ void meto::Affinity::write_map(meto::MPIContext const &mpi_context,
 
   // Construct the mask for each rank.
   std::string mask(max_cpus, '.');
-#pragma omp parallel default(none) shared(mask)
+#pragma omp parallel default(none) shared(mask, max_cpus)
   {
 
+    // Get the thread ID.
     int thread_id = 0;
 #ifdef _OPENMP
     thread_id = omp_get_thread_num();
 #endif
-
-    auto core_id = static_cast<std::size_t>(system_calls_->running_on_core());
     char thread_id_char = thread_id_to_char(thread_id);
+
+    // Get the core ID, and check that it's not out of range.
+    auto core_id = static_cast<std::size_t>(system_calls_->running_on_core());
+    if (core_id > max_cpus) {
+      meto::error_handler("Affinity::Affinity. Core ID out-of-range.",
+                          EXIT_FAILURE);
+    }
 
 // If more than one thread is running on the same core, show that with a
 // hash symbol.
@@ -143,8 +150,8 @@ void meto::Affinity::write_map(meto::MPIContext const &mpi_context,
 
   // Each rank computes its own offset.
   MPI_Offset my_offset =
-      header_length +
-      (static_cast<MPI_Offset>(mpi_context.get_rank()) * record_length);
+      header_length + (static_cast<MPI_Offset>(mpi_context.get_rank()) *
+                       max_record_length * static_cast<int>(sizeof(char)));
 
   // Create a view for each task which represents a unique, non-overlapping
   // region.
@@ -198,8 +205,12 @@ char meto::Affinity::thread_id_to_char(int num) {
  */
 
 int meto::MachineAffinitySysCalls::max_available_cpus() const {
-  int max_cpus = VERNIER_HIGH_NUM_CPUS_VALUE;
-  max_cpus = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
+  int max_cpus = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
+  if (max_cpus < 0) {
+    meto::error_handler(
+        "MachineAffinitySysCalls::max_available_cpus: sysconf failed.",
+        EXIT_FAILURE);
+  }
   return max_cpus;
 }
 
@@ -219,7 +230,11 @@ int meto::MachineAffinitySysCalls::num_available_cpus() const {
     tid = static_cast<pid_t>(syscall(SYS_gettid));
     CPU_ZERO(&cpumask);
 
-    sched_getaffinity(tid, sizeof(cpu_set_t), &cpumask);
+    if (sched_getaffinity(tid, sizeof(cpu_set_t), &cpumask) < 0) {
+      meto::error_handler("MachineAffinitySysCalls::num_available_cpus: "
+                          "sched_getaffinity failed.",
+                          EXIT_FAILURE);
+    }
 
     num_cpus = cpumask_weight(&cpumask);
 
@@ -254,7 +269,11 @@ int meto::MachineAffinitySysCalls::cpumask_weight(cpu_set_t *cpumask) const {
  */
 
 int meto::MachineAffinitySysCalls::running_on_core() const {
-  int core = VERNIER_HIGH_NUM_CPUS_VALUE;
-  core = sched_getcpu();
+  int core = sched_getcpu();
+  if (core < 0) {
+    meto::error_handler(
+        "MachineAffinitySysCalls::running_on_core: sched_getcpu failed.",
+        EXIT_FAILURE);
+  }
   return core;
 }

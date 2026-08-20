@@ -12,6 +12,7 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <sstream>
 #ifdef _OPENMP
 #include <omp.h>
 #endif
