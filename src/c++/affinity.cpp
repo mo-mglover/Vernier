@@ -80,7 +80,7 @@ void meto::Affinity::write_map(meto::MPIContext const &mpi_context,
 
     // Get the core ID, and check that it's not out of range.
     auto core_id = static_cast<std::size_t>(system_calls_->running_on_core());
-    if (core_id > max_cpus) {
+    if (core_id >= max_cpus) {
       meto::error_handler("Affinity::Affinity. Core ID out-of-range.",
                           EXIT_FAILURE);
     }
