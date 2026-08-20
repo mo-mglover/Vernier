@@ -107,7 +107,7 @@ void c_vernier_write() { meto::vernier.write(); }
 
 /**
  * @brief Write the affinity map, involving those ranks in the MPI communicator
- *        with which Vernier was initialised..
+ *        with which Vernier was initialised.
  * @param[in] tag  Optional string to include in the filename.
  */
 

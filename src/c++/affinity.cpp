@@ -168,7 +168,7 @@ void meto::Affinity::write_map(meto::MPIContext const &mpi_context,
  * @details Only the first 62 threads are representable, given the constraint of
  *          numerical digits, lower case letters and uppercase letters. That
  *          should be enough to determine whether affinitisation is working as
- *          expected. Threads with IDs higher than 62 appear as a tilde.
+ *          expected. Threads with IDs higher than 62 appear as '$'.
  */
 
 char meto::Affinity::thread_id_to_char(int num) {

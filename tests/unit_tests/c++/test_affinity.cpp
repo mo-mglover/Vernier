@@ -15,6 +15,7 @@
 #include <iterator>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "affinity.h"
 #include "mpi_context.h"
