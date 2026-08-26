@@ -27,7 +27,7 @@ void c_vernier_init(const MPI_Fint *const client_comm_handle,
 void c_vernier_finalize();
 void c_vernier_start_part1();
 void c_vernier_start_part2(long int &, char const *);
-void c_vernier_stop(long int const &);
+void c_vernier_stop(long int const &, double *);
 void c_vernier_write();
 double c_vernier_get_total_walltime(long int const &, int const &);
 double c_vernier_get_wtime();
@@ -84,16 +84,18 @@ void meto::c_vernier_start_part2(long int &hash_out, char const *name) {
 
 /**
  * @brief  Stop timing the region with the specified handle.
+ * @param [in] hash_in Hash value of the region to stop timing.
+ * @param [out] region_duration  The optional returned total wallclock time for
+ *                               the region.
  */
 
-void c_vernier_stop(long int const &hash_in) {
+void c_vernier_stop(long int const &hash_in, double *const region_duration) {
   size_t hash;
 
   // Ensure that the source and destination have the same size.
   static_assert(sizeof(hash) == sizeof(hash_in), "Hash/In size mismatch.");
   std::memcpy(&hash, &hash_in, sizeof(hash));
-
-  meto::vernier.stop(hash);
+  meto::vernier.stop(hash, region_duration);
 }
 
 /**
