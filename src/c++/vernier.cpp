@@ -224,9 +224,7 @@ void meto::Vernier::stop_impl(size_t const hash,
           " Received calliper: " +
           thread_hashtables_[tid].get_decorated_region_name(hash) + "\n";
       error_handler(error_msg, EXIT_FAILURE);
-    }
-
-    else {
+    } else {
 
       // Hash is unknown.
       std::string error_msg =
