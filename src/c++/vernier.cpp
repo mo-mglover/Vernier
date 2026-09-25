@@ -217,22 +217,21 @@ void meto::Vernier::stop(size_t const hash) {
 
       // Hash is known but unexpected.
       std::string error_msg =
-        "EMERGENCY STOP: hashes don't match. Expected calliper: " +
-        thread_hashtables_[tid].get_decorated_region_name(last_hash_on_list) +
-        " Received calliper: " +
-        thread_hashtables_[tid].get_decorated_region_name(hash) + "\n";
-        error_handler(error_msg, EXIT_FAILURE);
+          "EMERGENCY STOP: hashes don't match. Expected calliper: " +
+          thread_hashtables_[tid].get_decorated_region_name(last_hash_on_list) +
+          " Received calliper: " +
+          thread_hashtables_[tid].get_decorated_region_name(hash) + "\n";
+      error_handler(error_msg, EXIT_FAILURE);
     }
 
     else {
 
-       // Hash is unknown.
-       std::string error_msg =
-       "EMERGENCY STOP: received unknown hash. Expected calliper: " +
-       thread_hashtables_[tid].get_decorated_region_name(last_hash_on_list);
-       error_handler(error_msg, EXIT_FAILURE);
-
-     }
+      // Hash is unknown.
+      std::string error_msg =
+          "EMERGENCY STOP: received unknown hash. Expected calliper: " +
+          thread_hashtables_[tid].get_decorated_region_name(last_hash_on_list);
+      error_handler(error_msg, EXIT_FAILURE);
+    }
   }
 
   // Compute the region time
