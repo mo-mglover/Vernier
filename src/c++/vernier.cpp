@@ -178,14 +178,16 @@ size_t meto::Vernier::start_part2(std::string_view const region_name) {
 /**
  * @brief  Stop timing a profiled code region.
  * @param [in] hash   Hash of the profiled code region being stopped.
+ * @param [out] return_region_duration  Optional return of total region time.
  * @note  The calliper time (spent in the profiler) is measured by
  *        differencing the beginning of the start calliper from the end of the
- * stop calliper, and subtracting the measured region time. Hence larger
+ *        stop calliper, and subtracting the measured region time. Hence, larger
  *        absolute times are being measured, which are less likely to suffer
  *        fractional error from precision limitations of the clock.
  */
 
-void meto::Vernier::stop(size_t const hash) {
+void meto::Vernier::stop_impl(size_t const hash,
+                              double *const return_region_duration) {
 
   // Log the region stop time.
   auto region_stop_time = vernier_gettime();
@@ -237,6 +239,11 @@ void meto::Vernier::stop(size_t const hash) {
   // Compute the region time
   auto region_duration = region_stop_time - traceback_entry.region_start_time_;
 
+  // Return the total region time in seconds if requested.
+  if (return_region_duration) {
+    *return_region_duration = region_duration.count();
+  }
+
   // Do the hashtable update for the child region.
   thread_hashtables_[tid].decrement_recursion_level(
       traceback_entry.record_index_);
@@ -284,6 +291,35 @@ void meto::Vernier::stop(size_t const hash) {
   *profiler_overhead_time_ptr += calliper_time;
 }
 
+/**
+ * @brief Stop timing a profiled code region.
+ * @param hash  Hash of the profiled code region being stopped.
+ */
+
+void meto::Vernier::stop(size_t const hash) { stop_impl(hash); }
+
+/**
+ * @brief Stop timing a profiled code region.
+ * @param hash  Hash of the profiled code region being stopped.
+ * @param return_region_duration  Reference to a double to return the total
+ *                                region time in seconds.
+ */
+
+void meto::Vernier::stop(size_t const hash, double &return_region_duration) {
+  stop_impl(hash, &return_region_duration);
+}
+
+/**
+ * @brief Stop timing a profiled code region.
+ * @param hash  Hash of the profiled code region being stopped.
+ * @param return_region_duration  Pointer to a double to return the total
+ *                                region time in seconds.
+ */
+
+void meto::Vernier::stop(size_t const hash,
+                         double *const return_region_duration) {
+  stop_impl(hash, return_region_duration);
+}
 /**
  * @brief  Write profile information to file.
  *
